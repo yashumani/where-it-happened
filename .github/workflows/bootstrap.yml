@@ -17,11 +17,29 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Restore project source
+      - name: Restore and verify project source
         shell: bash
         run: |
           set -euo pipefail
-          cat .bootstrap/part-* > /tmp/where-it-happened.tar.gz
+          cat \
+            .bootstrap/part-000-a \
+            .bootstrap/part-000-b \
+            .bootstrap/part-000-c \
+            .bootstrap/part-000-d \
+            .bootstrap/part-000-e \
+            .bootstrap/part-000-f \
+            .bootstrap/part-000-g \
+            .bootstrap/part-000-h \
+            .bootstrap/part-001 \
+            .bootstrap/part-002 \
+            .bootstrap/part-003 \
+            .bootstrap/part-004-a \
+            .bootstrap/part-004-b \
+            .bootstrap/part-004-c \
+            .bootstrap/part-004-d \
+            > /tmp/where-it-happened.tar.gz
+          echo "f461f142a68ea0f98ffcf6abde556dea1f585a2a1012dadc24091fd30b75a8de  /tmp/where-it-happened.tar.gz" | sha256sum -c -
+          tar -tzf /tmp/where-it-happened.tar.gz > /dev/null
           tar -xzf /tmp/where-it-happened.tar.gz -C .
           rm -rf .bootstrap
           rm -f .github/workflows/bootstrap.yml
