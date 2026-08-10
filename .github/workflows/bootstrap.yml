@@ -21,6 +21,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if [[ ! -f .bootstrap/part-001 ]]; then
+            echo "Bootstrap payload has already been removed."
+            exit 0
+          fi
           cat \
             .bootstrap/part-000-a \
             .bootstrap/part-000-b \
@@ -42,7 +46,7 @@ jobs:
           tar -tzf /tmp/where-it-happened.tar.gz > /dev/null
           tar -xzf /tmp/where-it-happened.tar.gz -C .
           rm -rf .bootstrap
-          rm -f .github/workflows/bootstrap.yml
+          rm -f .github/workflows/pages.yml
 
       - name: Commit project
         shell: bash
