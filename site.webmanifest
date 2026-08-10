@@ -1,0 +1,17 @@
+{
+  "name": "Where It Happened — Memory Map Studio",
+  "short_name": "Memory Maps",
+  "description": "Turn a meaningful place into a personalized memory-map poster.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f3efe6",
+  "theme_color": "#f3efe6",
+  "icons": [
+    {
+      "src": "./assets/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
