@@ -1,0 +1,39 @@
+name: Apply scroll QA fixes
+
+on:
+  push:
+    branches: ["agent/scroll-qa-polish"]
+    paths: [".github/workflows/apply-scroll-qa.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out QA branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/scroll-qa-polish
+          fetch-depth: 0
+
+      - name: Apply validated rendered-QA patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git apply --check scroll-qa-fixes.patch
+          git apply scroll-qa-fixes.patch
+          rm scroll-qa-fixes.patch .github/workflows/apply-scroll-qa.yml
+          node --check scroll-story.js
+          node --check commerce.js
+
+      - name: Commit polished design
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Polish scroll storytelling after rendered QA"
+          git push origin HEAD:agent/scroll-qa-polish
