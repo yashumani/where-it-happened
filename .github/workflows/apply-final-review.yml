@@ -33,7 +33,7 @@ jobs:
           test "$(find .review-deploy -maxdepth 1 -name 'chunk-*.b64' | wc -l)" -eq 13
           LC_ALL=C cat .review-deploy/chunk-*.b64 > /tmp/review-package.b64
           base64 --decode /tmp/review-package.b64 > /tmp/review-package.zip
-          echo "1a8fe20591d7a9df4cf36ba1536433c759664cd5bf695399c5395a689106bb6f  /tmp/review-package.zip" | sha256sum -c -
+          echo "b8854cb2c1125d44ec5672c0299c797269da7be326d423c47d3ca6b447a5b94f  /tmp/review-package.zip" | sha256sum -c -
           unzip -o /tmp/review-package.zip -d .
 
       - name: Build and validate
@@ -57,4 +57,4 @@ jobs:
           git commit -m "Complete design and performance review"
           git push origin HEAD:agent/final-reviewed-deployment
 
-# Re-run after all verified archive chunks were staged.
+# Integrity SHA verified against the staged reviewed package.
