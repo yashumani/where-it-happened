@@ -1,4 +1,11 @@
-const atelierStyleSheets = ["atelier-1.css", "atelier-2.css", "atelier-3.css", "atelier-4.css", "studio-wizard.css"];
+const atelierStyleSheets = [
+  "atelier-1.css",
+  "atelier-2.css",
+  "atelier-3.css",
+  "atelier-4.css",
+  "studio-wizard.css",
+  "scroll-story.css"
+];
 
 for (const file of atelierStyleSheets) {
   if (document.head.querySelector(`link[data-atelier-style="${file}"]`)) continue;
@@ -116,7 +123,16 @@ requestAnimationFrame(() => {
   window.setTimeout(() => document.querySelector(".hero-art")?.classList.add("is-revealed"), 130);
 });
 
-import("./studio-wizard.js").catch((error) => {
-  console.error("The guided creator could not load.", error);
-  document.body.classList.remove("wizard-loading");
+Promise.allSettled([
+  import("./studio-wizard.js"),
+  import("./scroll-story.js")
+]).then((results) => {
+  const [wizardResult, scrollResult] = results;
+  if (wizardResult.status === "rejected") {
+    console.error("The guided creator could not load.", wizardResult.reason);
+    document.body.classList.remove("wizard-loading");
+  }
+  if (scrollResult.status === "rejected") {
+    console.error("The scroll-story design layer could not load.", scrollResult.reason);
+  }
 });
