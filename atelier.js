@@ -1,4 +1,4 @@
-const atelierStyleSheets = ["atelier-1.css", "atelier-2.css", "atelier-3.css", "atelier-4.css"];
+const atelierStyleSheets = ["atelier-1.css", "atelier-2.css", "atelier-3.css", "atelier-4.css", "studio-wizard.css"];
 
 for (const file of atelierStyleSheets) {
   if (document.head.querySelector(`link[data-atelier-style="${file}"]`)) continue;
@@ -9,7 +9,7 @@ for (const file of atelierStyleSheets) {
   document.head.append(link);
 }
 
-document.body.classList.add("atelier-theme");
+document.body.classList.add("atelier-theme", "wizard-loading");
 document.title = "Where It Happened — Cartographic Memory Atelier";
 
 const themeColor = document.querySelector('meta[name="theme-color"]');
@@ -114,4 +114,9 @@ if (!reducedMotion && heroArt && window.matchMedia("(pointer: fine)").matches) {
 requestAnimationFrame(() => {
   document.querySelector(".hero-copy")?.classList.add("is-revealed");
   window.setTimeout(() => document.querySelector(".hero-art")?.classList.add("is-revealed"), 130);
+});
+
+import("./studio-wizard.js").catch((error) => {
+  console.error("The guided creator could not load.", error);
+  document.body.classList.remove("wizard-loading");
 });
