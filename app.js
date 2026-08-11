@@ -1,8 +1,15 @@
 import { CITIES, CITY_BY_ID } from "./cities.js";
+import { STORE_CONFIG, PRODUCT_BY_ID, isPayhipProductConfigured } from "./store-config.js";
 
 const STORAGE_KEY = "where-it-happened.design.v1";
+const CART_STORAGE_KEY = "where-it-happened.cart.v1";
+const SEARCH_CACHE_KEY = "where-it-happened.search-cache.v1";
+const SELECTED_PRODUCT_KEY = "where-it-happened.selected-product.v1";
 const SHARED_HASH_PREFIX = "#design=";
 const MAP_STYLE_BASE = "https://tiles.openfreemap.org/styles/";
+const NOMINATIM_SEARCH_ENDPOINT = "https://nominatim.openstreetmap.org/search";
+const SEARCH_REQUEST_GAP_MS = 1100;
+const MAX_CART_ITEMS = 6;
 
 const THEMES = {
   paper: {
@@ -72,6 +79,12 @@ const EXPORT_SIZES = {
   portrait: { width: 1600, height: 2000 },
   square: { width: 1800, height: 1800 },
   wallpaper: { width: 1440, height: 2560 }
+};
+
+const FREE_EXPORT_SIZES = {
+  portrait: { width: 900, height: 1125 },
+  square: { width: 1000, height: 1000 },
+  wallpaper: { width: 720, height: 1280 }
 };
 
 const OCCASION_COPY = {
@@ -154,6 +167,12 @@ let locationResults = [];
 let saveTimer = null;
 let hasEditedSharedState = false;
 let suppressMapStateUpdate = false;
+let cart = loadCart();
+let selectedProductId = loadSelectedProduct();
+let heroLocationResults = [];
+let lastSearchRequestAt = 0;
+let checkoutOrderRef = "";
+let cartReturnFocus = null;
 
 const elements = {
   form: $("#posterForm"),
@@ -189,7 +208,46 @@ const elements = {
   shareDesign: $("#shareDesign"),
   resetDesign: $("#resetDesign"),
   resetDialog: $("#resetDialog"),
-  toastRegion: $("#toastRegion")
+  toastRegion: $("#toastRegion"),
+  openSearch: $("#openSearch"),
+  heroSearchForm: $("#heroSearchForm"),
+  heroLocationSearch: $("#heroLocationSearch"),
+  heroSearchSubmit: $("#heroSearchSubmit"),
+  heroSearchResults: $("#heroSearchResults"),
+  heroSearchStatus: $("#heroSearchStatus"),
+  useMyLocationHero: $("#useMyLocationHero"),
+  searchWorldwide: $("#searchWorldwide"),
+  useMyLocation: $("#useMyLocation"),
+  locationSearchStatus: $("#locationSearchStatus"),
+  productChoices: $("#productChoices"),
+  selectedProductName: $("#selectedProductName"),
+  selectedProductDescription: $("#selectedProductDescription"),
+  selectedProductPrice: $("#selectedProductPrice"),
+  addCurrentDesignToCart: $("#addCurrentDesignToCart"),
+  openCart: $("#openCart"),
+  cartCount: $("#cartCount"),
+  cartShell: $("#cartShell"),
+  cartBackdrop: $("#cartBackdrop"),
+  cartDrawer: $("#cartDrawer"),
+  closeCart: $("#closeCart"),
+  cartStartDesign: $("#cartStartDesign"),
+  cartEmpty: $("#cartEmpty"),
+  cartItems: $("#cartItems"),
+  cartFooter: $("#cartFooter"),
+  cartSubtotal: $("#cartSubtotal"),
+  checkoutCart: $("#checkoutCart"),
+  checkoutAvailability: $("#checkoutAvailability"),
+  checkoutDialog: $("#checkoutDialog"),
+  checkoutDialogTitle: $("#checkoutDialogTitle"),
+  checkoutDialogIntro: $("#checkoutDialogIntro"),
+  checkoutOrderPreview: $("#checkoutOrderPreview"),
+  checkoutPacket: $("#checkoutPacket"),
+  checkoutInstruction: $("#checkoutInstruction"),
+  checkoutReadyActions: $("#checkoutReadyActions"),
+  checkoutSetupNote: $("#checkoutSetupNote"),
+  copyAndCheckout: $("#copyAndCheckout"),
+  copyCheckoutPacket: $("#copyCheckoutPacket"),
+  copySetupOrder: $("#copySetupOrder")
 };
 
 boot();
@@ -198,6 +256,8 @@ function boot() {
   hydrateControlsFromState();
   bindEvents();
   renderAll({ updateMap: false });
+  renderProductSelection();
+  renderCart();
   initializeMap();
 
   if (window.location.hash.startsWith(SHARED_HASH_PREFIX)) {
@@ -263,6 +323,49 @@ function bindEvents() {
     });
   });
 
+  elements.openSearch?.addEventListener("click", () => {
+    $("#top").scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+    window.setTimeout(() => elements.heroLocationSearch?.focus(), reducedMotion ? 0 : 420);
+  });
+
+  elements.heroSearchForm?.addEventListener("submit", handleHeroSearch);
+  elements.heroSearchResults?.addEventListener("click", (event) => {
+    const option = event.target.closest("[data-hero-result-index]");
+    if (!option) return;
+    const result = heroLocationResults[Number(option.dataset.heroResultIndex)];
+    if (result) chooseHeroSearchResult(result);
+  });
+  elements.useMyLocationHero?.addEventListener("click", () => useBrowserLocation({ fromHero: true }));
+
+  elements.searchWorldwide?.addEventListener("click", searchWorldwideFromCreator);
+  elements.useMyLocation?.addEventListener("click", () => useBrowserLocation({ fromHero: false }));
+
+  $$('[data-shop-product]').forEach((button) => {
+    button.addEventListener("click", () => {
+      selectProduct(button.dataset.shopProduct);
+      $("#creator").scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+      window.setTimeout(() => elements.addCurrentDesignToCart?.focus(), reducedMotion ? 0 : 550);
+    });
+  });
+
+  $$('[data-product-id]').forEach((button) => {
+    button.addEventListener("click", () => selectProduct(button.dataset.productId));
+  });
+
+  elements.addCurrentDesignToCart?.addEventListener("click", addCurrentDesignToCart);
+  elements.openCart?.addEventListener("click", openCartDrawer);
+  elements.closeCart?.addEventListener("click", closeCartDrawer);
+  elements.cartBackdrop?.addEventListener("click", closeCartDrawer);
+  elements.cartStartDesign?.addEventListener("click", () => {
+    closeCartDrawer();
+    $("#creator").scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+  });
+  elements.cartItems?.addEventListener("click", handleCartAction);
+  elements.checkoutCart?.addEventListener("click", openCheckoutDialog);
+  elements.copyAndCheckout?.addEventListener("click", copyOrderAndOpenCheckout);
+  elements.copyCheckoutPacket?.addEventListener("click", copyCurrentCheckoutPacket);
+  elements.copySetupOrder?.addEventListener("click", copyCurrentCheckoutPacket);
+
   elements.locationSearch.addEventListener("focus", () => renderLocationOptions(elements.locationSearch.value));
   elements.locationSearch.addEventListener("input", () => renderLocationOptions(elements.locationSearch.value));
   elements.locationSearch.addEventListener("keydown", handleLocationKeydown);
@@ -272,8 +375,10 @@ function bindEvents() {
 
   elements.locationOptions.addEventListener("mousedown", (event) => event.preventDefault());
   elements.locationOptions.addEventListener("click", (event) => {
-    const option = event.target.closest("[data-city-id]");
-    if (option) selectCity(option.dataset.cityId);
+    const option = event.target.closest("[data-location-index]");
+    if (!option) return;
+    const result = locationResults[Number(option.dataset.locationIndex)];
+    if (result) selectLocationResult(result);
   });
 
   elements.clearLocation.addEventListener("click", () => {
@@ -337,8 +442,21 @@ function bindEvents() {
     if (!event.target.closest(".combobox-wrap")) closeLocationOptions();
   });
 
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !elements.cartShell?.hidden) closeCartDrawer();
+  });
+
+  window.addEventListener("storage", (event) => {
+    if (event.key === CART_STORAGE_KEY) {
+      cart = loadCart();
+      renderCart();
+    }
+  });
   window.addEventListener("resize", debounce(() => map?.resize(), 150));
-  window.addEventListener("beforeunload", saveDraft);
+  window.addEventListener("beforeunload", () => {
+    saveDraft();
+    saveCart();
+  });
 }
 
 function loadInitialState() {
@@ -573,35 +691,43 @@ function renderLocationOptions(query = "") {
     if (!normalized) return true;
     const haystack = normalizeSearch(`${city.city} ${city.country} ${city.countryCode}`);
     return haystack.includes(normalized);
-  }).slice(0, 10);
+  })
+    .slice(0, 10)
+    .map((city) => ({ ...city, source: "built-in", label: `${city.city}, ${city.country}` }));
 
-  activeLocationIndex = locationResults.length ? 0 : -1;
+  renderLocationResultList(locationResults, {
+    emptyMessage: "No popular city matched. Use Search worldwide or enter exact coordinates."
+  });
+}
+
+function renderLocationResultList(results, { emptyMessage = "No place matched." } = {}) {
+  activeLocationIndex = results.length ? 0 : -1;
   elements.locationOptions.replaceChildren();
 
-  if (!locationResults.length) {
+  if (!results.length) {
     const empty = document.createElement("p");
     empty.className = "empty-option";
-    empty.textContent = "No built-in city matched. Open Advanced location to enter exact coordinates.";
+    empty.textContent = emptyMessage;
     elements.locationOptions.append(empty);
   } else {
-    locationResults.forEach((city, index) => {
+    results.forEach((result, index) => {
       const option = document.createElement("button");
       option.type = "button";
       option.className = `combobox-option${index === activeLocationIndex ? " is-active" : ""}`;
-      option.id = `location-option-${city.id}`;
-      option.dataset.cityId = city.id;
+      option.id = `location-option-${index}`;
+      option.dataset.locationIndex = String(index);
       option.setAttribute("role", "option");
-      option.setAttribute("aria-selected", String(city.id === state.locationId));
+      option.setAttribute("aria-selected", String(result.id === state.locationId));
 
       const text = document.createElement("span");
-      const cityName = document.createElement("strong");
-      const countryName = document.createElement("small");
-      cityName.textContent = city.city;
-      countryName.textContent = city.country;
-      text.append(cityName, countryName);
+      const placeName = document.createElement("strong");
+      const placeContext = document.createElement("small");
+      placeName.textContent = result.city || result.name || "Selected place";
+      placeContext.textContent = result.context || result.country || result.displayName || "";
+      text.append(placeName, placeContext);
 
       const code = document.createElement("span");
-      code.textContent = city.countryCode;
+      code.textContent = result.source === "built-in" ? result.countryCode : result.typeLabel || "MAP";
       option.append(text, code);
       elements.locationOptions.append(option);
     });
@@ -627,7 +753,10 @@ function handleLocationKeydown(event) {
     refreshActiveOption();
   } else if (event.key === "Enter" && isOpen && activeLocationIndex >= 0) {
     event.preventDefault();
-    selectCity(locationResults[activeLocationIndex].id);
+    selectLocationResult(locationResults[activeLocationIndex]);
+  } else if (event.key === "Enter" && elements.locationSearch.value.trim().length >= 2) {
+    event.preventDefault();
+    searchWorldwideFromCreator();
   } else if (event.key === "Escape") {
     event.preventDefault();
     closeLocationOptions();
@@ -644,15 +773,23 @@ function refreshActiveOption() {
 }
 
 function updateActiveLocationDescendant() {
-  const active = locationResults[activeLocationIndex];
-  if (active) elements.locationSearch.setAttribute("aria-activedescendant", `location-option-${active.id}`);
-  else elements.locationSearch.removeAttribute("aria-activedescendant");
+  if (activeLocationIndex >= 0 && locationResults[activeLocationIndex]) {
+    elements.locationSearch.setAttribute("aria-activedescendant", `location-option-${activeLocationIndex}`);
+  } else {
+    elements.locationSearch.removeAttribute("aria-activedescendant");
+  }
 }
 
 function closeLocationOptions() {
   elements.locationOptions.hidden = true;
   elements.locationSearch.setAttribute("aria-expanded", "false");
   elements.locationSearch.removeAttribute("aria-activedescendant");
+}
+
+function selectLocationResult(result) {
+  if (!result) return;
+  if (result.source === "built-in") selectCity(result.id);
+  else selectExternalLocation(result);
 }
 
 function selectCity(cityId) {
@@ -697,6 +834,332 @@ function selectCity(cityId) {
   showToast("Place selected", `${city.city}, ${city.country}`);
 }
 
+
+function selectExternalLocation(result) {
+  const lat = validNumber(result.lat, state.lat, -90, 90);
+  const lng = validNumber(result.lng, state.lng, -180, 180);
+  const city = safeText(result.city || result.name, "Selected place", 80);
+  const country = safeText(result.country || result.context, "Mapped location", 80);
+  const zoom = validNumber(result.zoom, 12, 4, 16);
+
+  state.locationId = safeText(result.id, "custom", 120);
+  state.city = city;
+  state.country = country;
+  state.lat = lat;
+  state.lng = lng;
+  state.centerLat = lat;
+  state.centerLng = lng;
+  state.zoom = zoom;
+  state.subtitle = formatSubtitle(city, country);
+
+  elements.locationSearch.value = result.label || `${city}, ${country}`;
+  elements.subtitleInput.value = state.subtitle;
+  elements.zoomRange.value = String(state.zoom);
+  elements.zoomOutput.value = state.zoom.toFixed(1);
+  elements.zoomOutput.textContent = state.zoom.toFixed(1);
+  elements.locationSearchStatus.textContent = `Selected from worldwide search · ${city}, ${country}`;
+  closeLocationOptions();
+  markAsEdited();
+  renderPosterText();
+  renderLocationSummary();
+  renderPosterClasses();
+  updateMarkerData();
+
+  if (map) {
+    suppressMapStateUpdate = true;
+    map.flyTo({
+      center: [lng, lat],
+      zoom: state.zoom,
+      duration: reducedMotion ? 0 : 900,
+      essential: true
+    });
+    window.setTimeout(() => {
+      suppressMapStateUpdate = false;
+    }, reducedMotion ? 20 : 950);
+  }
+
+  scheduleSave();
+  showToast("Place selected", `${city}, ${country}`);
+}
+
+async function handleHeroSearch(event) {
+  event.preventDefault();
+  const query = elements.heroLocationSearch.value.trim();
+  if (query.length < 2) {
+    elements.heroSearchStatus.textContent = "Enter at least two characters to search.";
+    elements.heroLocationSearch.focus();
+    return;
+  }
+
+  setButtonBusy(elements.heroSearchSubmit, true, "Searching…");
+  elements.heroSearchStatus.textContent = `Searching for “${query}”…`;
+  elements.heroSearchResults.hidden = true;
+
+  try {
+    heroLocationResults = await searchPlaces(query);
+    renderHeroSearchResults(heroLocationResults);
+    elements.heroSearchStatus.textContent = heroLocationResults.length
+      ? `${heroLocationResults.length} place${heroLocationResults.length === 1 ? "" : "s"} found. Search data © OpenStreetMap contributors.`
+      : "No place matched. Try a nearby city, landmark, postcode, or exact address.";
+  } catch (error) {
+    console.error("Worldwide search failed.", error);
+    heroLocationResults = [];
+    renderHeroSearchResults([]);
+    elements.heroSearchStatus.textContent = "Worldwide search is temporarily unavailable. The built-in city list still works in the editor.";
+    showToast("Search could not connect", "Try again or choose a popular city in the editor.", true);
+  } finally {
+    setButtonBusy(elements.heroSearchSubmit, false);
+  }
+}
+
+function renderHeroSearchResults(results) {
+  elements.heroSearchResults.replaceChildren();
+  if (!results.length) {
+    elements.heroSearchResults.hidden = true;
+    return;
+  }
+
+  results.forEach((result, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.heroResultIndex = String(index);
+
+    const pin = document.createElement("span");
+    pin.className = "hero-result-pin";
+    pin.textContent = result.source === "built-in" ? "●" : "⌖";
+
+    const copy = document.createElement("span");
+    const strong = document.createElement("strong");
+    const small = document.createElement("small");
+    strong.textContent = result.city || result.name;
+    small.textContent = result.context || result.country || result.displayName;
+    copy.append(strong, small);
+
+    const action = document.createElement("b");
+    action.textContent = "Use";
+    button.append(pin, copy, action);
+    elements.heroSearchResults.append(button);
+  });
+
+  elements.heroSearchResults.hidden = false;
+}
+
+function chooseHeroSearchResult(result) {
+  selectLocationResult(result);
+  elements.heroSearchResults.hidden = true;
+  elements.heroLocationSearch.value = result.label || `${result.city}, ${result.country}`;
+  $("#creator").scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+  window.setTimeout(() => elements.locationSearch?.focus(), reducedMotion ? 0 : 550);
+}
+
+async function searchWorldwideFromCreator() {
+  const query = elements.locationSearch.value.trim();
+  if (query.length < 2) {
+    elements.locationSearchStatus.textContent = "Enter at least two characters, then choose Search worldwide.";
+    elements.locationSearch.focus();
+    return;
+  }
+
+  setButtonBusy(elements.searchWorldwide, true, "Searching…");
+  elements.locationSearchStatus.textContent = `Searching worldwide for “${query}”…`;
+
+  try {
+    locationResults = await searchPlaces(query);
+    renderLocationResultList(locationResults, {
+      emptyMessage: "No place matched. Try a nearby landmark, postcode, or exact address."
+    });
+    elements.locationSearchStatus.textContent = locationResults.length
+      ? `${locationResults.length} place${locationResults.length === 1 ? "" : "s"} found · Search data © OpenStreetMap contributors.`
+      : "No worldwide result matched. Exact coordinates remain available below.";
+  } catch (error) {
+    console.error("Worldwide search failed.", error);
+    elements.locationSearchStatus.textContent = "Worldwide search is temporarily unavailable. Popular-city search still works.";
+    showToast("Search could not connect", "Try again or use exact coordinates.", true);
+  } finally {
+    setButtonBusy(elements.searchWorldwide, false);
+  }
+}
+
+async function searchPlaces(query) {
+  const normalized = normalizeSearch(query);
+  const local = CITIES.filter((city) => {
+    const haystack = normalizeSearch(`${city.city} ${city.country} ${city.countryCode}`);
+    return haystack.includes(normalized);
+  })
+    .slice(0, 4)
+    .map((city) => ({
+      ...city,
+      source: "built-in",
+      label: `${city.city}, ${city.country}`,
+      context: city.country,
+      zoom: defaultZoomForCity(city.id),
+      typeLabel: city.countryCode
+    }));
+
+  const remote = await searchNominatim(query);
+  const combined = [...local];
+
+  remote.forEach((candidate) => {
+    const duplicate = combined.some((existing) => {
+      const latGap = Math.abs(Number(existing.lat) - Number(candidate.lat));
+      const lngGap = Math.abs(Number(existing.lng) - Number(candidate.lng));
+      return latGap < 0.04 && lngGap < 0.04;
+    });
+    if (!duplicate) combined.push(candidate);
+  });
+
+  return combined.slice(0, 8);
+}
+
+async function searchNominatim(query) {
+  const cacheKey = normalizeSearch(query);
+  const cached = readSearchCache(cacheKey);
+  if (cached) return cached;
+
+  const elapsed = Date.now() - lastSearchRequestAt;
+  if (elapsed < SEARCH_REQUEST_GAP_MS) await delay(SEARCH_REQUEST_GAP_MS - elapsed);
+  lastSearchRequestAt = Date.now();
+
+  const url = new URL(NOMINATIM_SEARCH_ENDPOINT);
+  url.searchParams.set("format", "jsonv2");
+  url.searchParams.set("q", query);
+  url.searchParams.set("limit", "6");
+  url.searchParams.set("addressdetails", "1");
+  url.searchParams.set("dedupe", "1");
+  url.searchParams.set("accept-language", navigator.language || "en");
+
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 9000);
+
+  try {
+    const response = await fetch(url, {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+      referrerPolicy: "strict-origin-when-cross-origin"
+    });
+    if (!response.ok) throw new Error(`Search returned ${response.status}`);
+    const data = await response.json();
+    const results = Array.isArray(data) ? data.map(normalizeNominatimResult).filter(Boolean) : [];
+    writeSearchCache(cacheKey, results);
+    return results;
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
+function normalizeNominatimResult(item) {
+  const lat = Number(item?.lat);
+  const lng = Number(item?.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+
+  const address = item.address ?? {};
+  const firstDisplayPart = String(item.display_name || "").split(",")[0].trim();
+  const name = item.name || firstDisplayPart || address.road || address.neighbourhood || "Selected place";
+  const locality =
+    address.city ||
+    address.town ||
+    address.village ||
+    address.municipality ||
+    address.hamlet ||
+    address.county ||
+    name;
+  const country = address.country || address.country_code?.toUpperCase() || "Mapped location";
+  const region = address.state || address.county || address.city_district || address.suburb || "";
+  const context = [region, country].filter((value, index, values) => value && values.indexOf(value) === index).join(", ");
+  const type = String(item.type || item.addresstype || "place").replaceAll("_", " ");
+
+  return {
+    id: `osm-${item.osm_type || "place"}-${item.osm_id || item.place_id || `${lat}-${lng}`}`,
+    source: "nominatim",
+    city: safeText(name || locality, locality, 80),
+    country: safeText(country, "Mapped location", 80),
+    context: safeText(context || item.display_name, country, 150),
+    displayName: safeText(item.display_name, `${name}, ${country}`, 220),
+    label: safeText(item.display_name, `${name}, ${country}`, 180),
+    typeLabel: type.slice(0, 12).toUpperCase(),
+    lat,
+    lng,
+    zoom: zoomForPlaceType(item.addresstype || item.type)
+  };
+}
+
+function zoomForPlaceType(type = "") {
+  const normalized = String(type).toLowerCase();
+  if (["house", "building", "amenity", "tourism", "shop", "office"].includes(normalized)) return 16;
+  if (["road", "street", "pedestrian", "neighbourhood", "suburb"].includes(normalized)) return 14;
+  if (["city", "town", "village", "municipality", "borough"].includes(normalized)) return 11.5;
+  if (["county", "state", "province", "region"].includes(normalized)) return 7.5;
+  if (["country"].includes(normalized)) return 5;
+  return 12.5;
+}
+
+function readSearchCache(key) {
+  try {
+    const cache = JSON.parse(window.localStorage.getItem(SEARCH_CACHE_KEY) || "{}");
+    const entry = cache[key];
+    if (!entry || !Array.isArray(entry.results)) return null;
+    if (Date.now() - Number(entry.savedAt || 0) > 30 * 24 * 60 * 60 * 1000) return null;
+    return entry.results;
+  } catch {
+    return null;
+  }
+}
+
+function writeSearchCache(key, results) {
+  try {
+    const cache = JSON.parse(window.localStorage.getItem(SEARCH_CACHE_KEY) || "{}");
+    cache[key] = { savedAt: Date.now(), results };
+    const entries = Object.entries(cache)
+      .sort((a, b) => Number(b[1]?.savedAt || 0) - Number(a[1]?.savedAt || 0))
+      .slice(0, 30);
+    window.localStorage.setItem(SEARCH_CACHE_KEY, JSON.stringify(Object.fromEntries(entries)));
+  } catch {
+    // Search still works when local cache is unavailable.
+  }
+}
+
+function useBrowserLocation({ fromHero = false } = {}) {
+  if (!navigator.geolocation) {
+    showToast("Location unavailable", "This browser does not provide location access.", true);
+    return;
+  }
+
+  const trigger = fromHero ? elements.useMyLocationHero : elements.useMyLocation;
+  setButtonBusy(trigger, true, "Locating…");
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      selectExternalLocation({
+        id: "device-location",
+        source: "device",
+        city: "Current location",
+        country: "Your device",
+        context: coordinatesLabel(lat, lng),
+        label: "Current location",
+        typeLabel: "HERE",
+        lat,
+        lng,
+        zoom: 14
+      });
+      setButtonBusy(trigger, false);
+      if (fromHero) {
+        elements.heroLocationSearch.value = "Current location";
+        $("#creator").scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+      }
+    },
+    (error) => {
+      setButtonBusy(trigger, false);
+      const message = error.code === error.PERMISSION_DENIED
+        ? "Location permission was declined. Search for the place instead."
+        : "Your location could not be read. Search for the place instead.";
+      showToast("Location not selected", message, true);
+    },
+    { enableHighAccuracy: false, timeout: 9000, maximumAge: 300000 }
+  );
+}
+
 function applyManualCoordinates() {
   const lat = Number(elements.latitude.value);
   const lng = Number(elements.longitude.value);
@@ -732,6 +1195,388 @@ function applyManualCoordinates() {
 
   scheduleSave();
   showToast("Coordinates applied", `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+}
+
+
+function loadSelectedProduct() {
+  try {
+    const stored = window.localStorage.getItem(SELECTED_PRODUCT_KEY);
+    if (stored && PRODUCT_BY_ID[stored]) return stored;
+  } catch {
+    // The default remains available when local storage is blocked.
+  }
+  return STORE_CONFIG.defaultProductId;
+}
+
+function selectProduct(productId) {
+  if (!PRODUCT_BY_ID[productId]) return;
+  selectedProductId = productId;
+  try {
+    window.localStorage.setItem(SELECTED_PRODUCT_KEY, productId);
+  } catch {
+    // Product selection still works for the current page.
+  }
+  renderProductSelection();
+}
+
+function renderProductSelection() {
+  const product = PRODUCT_BY_ID[selectedProductId] ?? STORE_CONFIG.products[0];
+  selectedProductId = product.id;
+
+  $$('[data-product-id]').forEach((button) => {
+    const selected = button.dataset.productId === product.id;
+    button.classList.toggle("is-selected", selected);
+    button.setAttribute("aria-pressed", String(selected));
+  });
+
+  $$('[data-product-card]').forEach((card) => {
+    card.classList.toggle("is-selected", card.dataset.productCard === product.id);
+  });
+
+  if (elements.selectedProductName) elements.selectedProductName.textContent = product.name;
+  if (elements.selectedProductDescription) elements.selectedProductDescription.textContent = product.description;
+  if (elements.selectedProductPrice) elements.selectedProductPrice.textContent = formatCurrency(product.price);
+}
+
+function loadCart() {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(CART_STORAGE_KEY) || "[]");
+    if (!Array.isArray(stored)) return [];
+    return stored.map(sanitizeCartItem).filter(Boolean).slice(0, MAX_CART_ITEMS);
+  } catch (error) {
+    console.warn("Could not read the saved cart.", error);
+    return [];
+  }
+}
+
+function sanitizeCartItem(candidate) {
+  if (!candidate || typeof candidate !== "object") return null;
+  const product = PRODUCT_BY_ID[candidate.productId];
+  if (!product) return null;
+  const design = sanitizeState(candidate.design);
+  return {
+    id: typeof candidate.id === "string" ? candidate.id.slice(0, 80) : createCartId(),
+    productId: product.id,
+    design,
+    designKey: typeof candidate.designKey === "string" ? candidate.designKey : encodeSharedState(design),
+    addedAt: Number.isFinite(Number(candidate.addedAt)) ? Number(candidate.addedAt) : Date.now()
+  };
+}
+
+function saveCart() {
+  try {
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+  } catch (error) {
+    console.warn("Could not save the cart.", error);
+  }
+}
+
+function createCartId() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+  return `cart-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function addCurrentDesignToCart() {
+  const product = PRODUCT_BY_ID[selectedProductId];
+  if (!product) return;
+  const design = sanitizeState(state);
+  const designKey = encodeSharedState(design);
+  const existing = cart.find((item) => item.productId === product.id && item.designKey === designKey);
+
+  if (existing) {
+    openCartDrawer();
+    showToast("Already in your cart", `${product.name} for ${design.city} is saved there.`);
+    return;
+  }
+
+  if (cart.length >= MAX_CART_ITEMS) {
+    openCartDrawer();
+    showToast("Cart limit reached", `This MVP keeps up to ${MAX_CART_ITEMS} custom maps in one cart.`, true);
+    return;
+  }
+
+  cart.push({
+    id: createCartId(),
+    productId: product.id,
+    design,
+    designKey,
+    addedAt: Date.now()
+  });
+  saveCart();
+  renderCart();
+  openCartDrawer();
+  showToast("Design added to cart", `${product.name} · ${design.city}`);
+}
+
+function renderCart() {
+  if (!elements.cartItems) return;
+  elements.cartItems.replaceChildren();
+  const count = cart.length;
+  elements.cartCount.textContent = String(count);
+  elements.cartCount.setAttribute("aria-label", `${count} item${count === 1 ? "" : "s"} in cart`);
+  elements.openCart?.classList.toggle("has-items", count > 0);
+  elements.cartEmpty.hidden = count > 0;
+  elements.cartFooter.hidden = count === 0;
+
+  cart.forEach((item) => {
+    const product = PRODUCT_BY_ID[item.productId];
+    if (!product) return;
+
+    const article = document.createElement("article");
+    article.className = "cart-item";
+    article.dataset.cartItemId = item.id;
+
+    const thumbnail = document.createElement("div");
+    thumbnail.className = `cart-item-thumbnail cart-theme-${item.design.theme}`;
+    const thumbnailMap = document.createElement("span");
+    const thumbnailTitle = document.createElement("strong");
+    const thumbnailPlace = document.createElement("small");
+    thumbnailTitle.textContent = item.design.title || "MEMORY MAP";
+    thumbnailPlace.textContent = item.design.city || "Custom place";
+    thumbnail.append(thumbnailMap, thumbnailTitle, thumbnailPlace);
+
+    const copy = document.createElement("div");
+    copy.className = "cart-item-copy";
+    const productName = document.createElement("p");
+    productName.textContent = product.name;
+    const title = document.createElement("h3");
+    title.textContent = item.design.city || "Custom location";
+    const details = document.createElement("span");
+    details.textContent = `${THEMES[item.design.theme]?.label || "Map"} · ${FORMAT_LABELS[item.design.format] || "Format"}`;
+    const actions = document.createElement("div");
+    actions.className = "cart-item-actions";
+
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.dataset.cartAction = "edit";
+    edit.dataset.cartId = item.id;
+    edit.textContent = "Edit design";
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.dataset.cartAction = "remove";
+    remove.dataset.cartId = item.id;
+    remove.textContent = "Remove";
+    actions.append(edit, remove);
+    copy.append(productName, title, details, actions);
+
+    const price = document.createElement("strong");
+    price.className = "cart-item-price";
+    price.textContent = formatCurrency(product.price);
+
+    article.append(thumbnail, copy, price);
+    elements.cartItems.append(article);
+  });
+
+  const subtotal = cart.reduce((sum, item) => sum + (PRODUCT_BY_ID[item.productId]?.price || 0), 0);
+  elements.cartSubtotal.textContent = formatCurrency(subtotal);
+
+  const ready = isCartCheckoutConfigured();
+  elements.checkoutAvailability.textContent = ready
+    ? "Secure checkout is ready. Your cart remains saved until you remove it."
+    : "Secure payment is being connected. Your cart remains saved on this device.";
+  elements.checkoutCart.textContent = ready ? "Continue to secure checkout" : "Review order details";
+}
+
+function handleCartAction(event) {
+  const button = event.target.closest("[data-cart-action]");
+  if (!button) return;
+  const item = cart.find((candidate) => candidate.id === button.dataset.cartId);
+  if (!item) return;
+
+  if (button.dataset.cartAction === "remove") {
+    cart = cart.filter((candidate) => candidate.id !== item.id);
+    saveCart();
+    renderCart();
+    showToast("Removed from cart", `${item.design.city || "The design"} was removed.`);
+  } else if (button.dataset.cartAction === "edit") {
+    state = sanitizeState(item.design);
+    selectProduct(item.productId);
+    hydrateControlsFromState();
+    renderAll({ updateMap: false });
+    setMapStyle(state.theme, { jumpToLocation: true });
+    scheduleSave();
+    closeCartDrawer();
+    $("#creator").scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+    showToast("Cart design opened", "Edit it, then add the updated version to your cart.");
+  }
+}
+
+function openCartDrawer() {
+  if (!elements.cartShell) return;
+  cartReturnFocus = document.activeElement;
+  elements.cartShell.hidden = false;
+  document.body.classList.add("cart-open");
+  elements.openCart?.setAttribute("aria-expanded", "true");
+  window.requestAnimationFrame(() => {
+    elements.cartShell.classList.add("is-open");
+    elements.cartDrawer?.focus();
+  });
+}
+
+function closeCartDrawer() {
+  if (!elements.cartShell || elements.cartShell.hidden) return;
+  elements.cartShell.classList.remove("is-open");
+  document.body.classList.remove("cart-open");
+  elements.openCart?.setAttribute("aria-expanded", "false");
+  window.setTimeout(() => {
+    if (!elements.cartShell.classList.contains("is-open")) elements.cartShell.hidden = true;
+  }, reducedMotion ? 0 : 230);
+  if (cartReturnFocus instanceof HTMLElement) cartReturnFocus.focus({ preventScroll: true });
+}
+
+function isCartCheckoutConfigured() {
+  return cart.length > 0 && cart.every((item) => isPayhipProductConfigured(PRODUCT_BY_ID[item.productId]));
+}
+
+function openCheckoutDialog() {
+  if (!cart.length) {
+    showToast("Your cart is empty", "Add a finished design before opening checkout.", true);
+    return;
+  }
+
+  checkoutOrderRef = createOrderReference();
+  const packet = buildOrderPacket(checkoutOrderRef);
+  elements.checkoutPacket.value = packet;
+  renderCheckoutOrderPreview();
+
+  const ready = isCartCheckoutConfigured();
+  elements.checkoutReadyActions.hidden = !ready;
+  elements.checkoutSetupNote.hidden = ready;
+  elements.checkoutInstruction.hidden = !ready;
+  elements.checkoutDialogTitle.textContent = ready
+    ? "Your order details are ready."
+    : "Your cart is ready and saved.";
+  elements.checkoutDialogIntro.textContent = ready
+    ? "We will copy the design details first, then open the secure hosted checkout page."
+    : "Secure checkout is being connected. Copy your saved order details now, and this cart will still be here when payment goes live.";
+
+  closeCartDrawer();
+  if (elements.checkoutDialog?.showModal) elements.checkoutDialog.showModal();
+  else showToast("Checkout details ready", "Copy the order details from the cart.");
+}
+
+function renderCheckoutOrderPreview() {
+  elements.checkoutOrderPreview.replaceChildren();
+  cart.forEach((item, index) => {
+    const product = PRODUCT_BY_ID[item.productId];
+    const row = document.createElement("div");
+    const copy = document.createElement("span");
+    const strong = document.createElement("strong");
+    const small = document.createElement("small");
+    const price = document.createElement("b");
+    strong.textContent = `${index + 1}. ${item.design.city || "Custom map"}`;
+    small.textContent = product.name;
+    price.textContent = formatCurrency(product.price);
+    copy.append(strong, small);
+    row.append(copy, price);
+    elements.checkoutOrderPreview.append(row);
+  });
+}
+
+function createOrderReference() {
+  const now = new Date();
+  const date = [now.getUTCFullYear().toString().slice(-2), String(now.getUTCMonth() + 1).padStart(2, "0"), String(now.getUTCDate()).padStart(2, "0")].join("");
+  const random = Math.random().toString(36).slice(2, 7).toUpperCase();
+  return `WIH-${date}-${random}`;
+}
+
+function buildOrderPacket(orderRef) {
+  const lines = [
+    `WHERE IT HAPPENED ORDER ${orderRef}`,
+    `Items: ${cart.length}`,
+    ""
+  ];
+
+  cart.forEach((item, index) => {
+    const product = PRODUCT_BY_ID[item.productId];
+    lines.push(`${index + 1}. ${product.name} — ${formatCurrency(product.price)}`);
+    lines.push(`Place: ${item.design.city}, ${item.design.country}`);
+    lines.push(`Style: ${THEMES[item.design.theme]?.label || item.design.theme} · ${FORMAT_LABELS[item.design.format] || item.design.format}`);
+    lines.push(`Title: ${item.design.title || "Memory map"}`);
+    lines.push(`Design link: ${buildShareUrl(item.design)}`);
+    lines.push("");
+  });
+
+  const subtotal = cart.reduce((sum, item) => sum + (PRODUCT_BY_ID[item.productId]?.price || 0), 0);
+  lines.push(`Subtotal: ${formatCurrency(subtotal)}`);
+  lines.push("Please paste this complete block into the Design details field at checkout.");
+  return lines.join("\n");
+}
+
+function buildPayhipCheckoutUrl(orderRef) {
+  if (!isCartCheckoutConfigured()) return null;
+  const url = new URL(STORE_CONFIG.payhipCheckoutBase);
+
+  if (cart.length === 1) {
+    url.searchParams.set("link", PRODUCT_BY_ID[cart[0].productId].payhipKey);
+  } else {
+    cart.forEach((item) => url.searchParams.append("cart_links[]", PRODUCT_BY_ID[item.productId].payhipKey));
+  }
+
+  url.searchParams.set("metadata[order_ref]", orderRef);
+  url.searchParams.set("metadata[item_count]", String(cart.length));
+  url.searchParams.set("metadata[source]", "where-it-happened");
+  cart.slice(0, 6).forEach((item, index) => {
+    const compact = `${item.productId}|${slugify(item.design.city || "place")}|${item.design.theme}|${item.design.format}|${item.designKey.slice(0, 24)}`;
+    url.searchParams.set(`metadata[item_${index + 1}]`, compact.slice(0, 500));
+  });
+  return url.toString();
+}
+
+async function copyCurrentCheckoutPacket() {
+  try {
+    await copyText(elements.checkoutPacket.value);
+    showToast("Order details copied", "Keep them with the order or paste them into checkout.");
+  } catch (error) {
+    console.error("Could not copy order details.", error);
+    showToast("Copy failed", "Select the order details and copy them manually.", true);
+  }
+}
+
+async function copyOrderAndOpenCheckout() {
+  const checkoutUrl = buildPayhipCheckoutUrl(checkoutOrderRef);
+  if (!checkoutUrl) {
+    await copyCurrentCheckoutPacket();
+    return;
+  }
+
+  // Open the tab during the original click gesture so strict pop-up blockers do not
+  // discard the checkout after the asynchronous clipboard operation completes.
+  const checkoutWindow = window.open("about:blank", "_blank");
+  if (!checkoutWindow) {
+    showToast("Pop-up blocked", "Allow pop-ups for this site, then continue to checkout again.", true);
+    return;
+  }
+  checkoutWindow.opener = null;
+
+  try {
+    await copyText(elements.checkoutPacket.value);
+    try {
+      window.localStorage.setItem("where-it-happened.pending-order.v1", JSON.stringify({
+        orderRef: checkoutOrderRef,
+        cart,
+        createdAt: Date.now()
+      }));
+    } catch {
+      // The checkout can continue without pending-order storage.
+    }
+
+    checkoutWindow.location.replace(checkoutUrl);
+    showToast("Secure checkout opened", "Paste the copied design details into the required checkout field.");
+  } catch (error) {
+    checkoutWindow.close();
+    console.error("Checkout handoff failed.", error);
+    showToast("Checkout did not open", "Copy the order details and try again.", true);
+  }
+}
+
+function formatCurrency(amount) {
+  return new Intl.NumberFormat(STORE_CONFIG.locale, {
+    style: "currency",
+    currency: STORE_CONFIG.currency,
+    maximumFractionDigits: 0
+  }).format(amount);
 }
 
 function initializeMap() {
@@ -953,15 +1798,15 @@ function resetToDefault() {
 }
 
 async function handleDownload() {
-  setButtonBusy(elements.downloadPng, true, "Preparing PNG…");
+  setButtonBusy(elements.downloadPng, true, "Preparing preview…");
   document.body.classList.add("is-exporting");
 
   try {
-    const canvas = await composePosterCanvas();
+    const canvas = await composePosterCanvas({ sizes: FREE_EXPORT_SIZES, watermark: true });
     const blob = await canvasToBlob(canvas, "image/png");
-    const filename = `${slugify(state.city || "custom-place")}-${slugify(state.title || "memory-map")}.png`;
+    const filename = `${slugify(state.city || "custom-place")}-${slugify(state.title || "memory-map")}-free-preview.png`;
     downloadBlob(blob, filename);
-    showToast("PNG downloaded", `${filename} is ready.`);
+    showToast("Free preview downloaded", "Your watermarked proof is ready. Finished cart products are watermark-free.");
   } catch (error) {
     console.error("PNG export failed.", error);
     showToast("Export needs another try", "The map may still be loading. Wait a moment, then download again.", true);
@@ -982,7 +1827,7 @@ async function handlePrint() {
   setButtonBusy(elements.printPdf, true, "Preparing print…");
 
   try {
-    const canvas = await composePosterCanvas();
+    const canvas = await composePosterCanvas({ sizes: FREE_EXPORT_SIZES, watermark: true });
     const blob = await canvasToBlob(canvas, "image/png");
     const objectUrl = URL.createObjectURL(blob);
     const pageOrientation = state.format === "square" ? "portrait" : state.format === "wallpaper" ? "portrait" : "portrait";
@@ -1014,7 +1859,7 @@ async function handlePrint() {
     `);
     printWindow.document.close();
     window.setTimeout(() => URL.revokeObjectURL(objectUrl), 120000);
-    showToast("Print view opened", "Choose “Save as PDF” in your browser’s print dialog.");
+    showToast("Preview print view opened", "This proof includes the free-preview watermark. Finished print files are available in the cart.");
   } catch (error) {
     console.error("Print preparation failed.", error);
     printWindow.close();
@@ -1048,9 +1893,9 @@ async function handleShare() {
   }
 }
 
-function buildShareUrl() {
+function buildShareUrl(source = state) {
   const url = new URL(window.location.href);
-  url.hash = `design=${encodeSharedState(state)}`;
+  url.hash = `design=${encodeSharedState(source)}`;
   return url.toString();
 }
 
@@ -1117,10 +1962,10 @@ function parseSharedState(hash) {
   }
 }
 
-async function composePosterCanvas() {
+async function composePosterCanvas({ sizes = EXPORT_SIZES, watermark = false } = {}) {
   await waitForMapFrame();
 
-  const { width, height } = EXPORT_SIZES[state.format];
+  const { width, height } = sizes[state.format] ?? sizes.portrait;
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -1143,7 +1988,37 @@ async function composePosterCanvas() {
   context.lineWidth = Math.max(2, Math.round(width * 0.0014));
   context.strokeRect(art.x + 1, art.y + 1, art.width - 2, art.height - 2);
   drawAttribution(context, art, theme);
+  if (watermark) drawPreviewWatermark(context, width, height, theme);
   return canvas;
+}
+
+
+function drawPreviewWatermark(context, width, height, theme) {
+  const label = "FREE PREVIEW · WHERE IT HAPPENED";
+  const fontSize = Math.max(18, Math.round(Math.min(width, height) * 0.024));
+  context.save();
+  context.translate(width / 2, height / 2);
+  context.rotate(-Math.PI / 7);
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.font = `700 ${fontSize}px ${getComputedStyle(document.documentElement).getPropertyValue("--sans") || "system-ui"}`;
+  context.fillStyle = theme.overlayText || "#ffffff";
+  context.globalAlpha = 0.2;
+  [-height * 0.28, 0, height * 0.28].forEach((offset) => {
+    context.fillText(label, 0, offset, width * 0.9);
+  });
+  context.restore();
+
+  const ribbonHeight = Math.max(42, Math.round(height * 0.038));
+  context.save();
+  context.fillStyle = "rgba(15, 15, 15, 0.82)";
+  context.fillRect(0, height - ribbonHeight, width, ribbonHeight);
+  context.fillStyle = "#fffdf7";
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.font = `700 ${Math.max(14, Math.round(ribbonHeight * 0.34))}px system-ui, sans-serif`;
+  context.fillText("FREE WATERMARKED PROOF · FINISHED FILES AVAILABLE IN CART", width / 2, height - ribbonHeight / 2, width * 0.94);
+  context.restore();
 }
 
 function drawClassicExport(context, art, theme) {
@@ -1600,6 +2475,10 @@ function darkenForOverlay(color, alpha) {
   const green = Math.round(((integer >> 8) & 255) * 0.32);
   const blue = Math.round((integer & 255) * 0.32);
   return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
+function delay(milliseconds) {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 }
 
 function debounce(callback, wait) {

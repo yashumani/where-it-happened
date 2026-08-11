@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f3efe6" />
+    <meta name="robots" content="noindex" />
+    <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css" />
+    <title>Thank you — Where It Happened</title>
+    <script type="module" src="./thank-you.js"></script>
+  </head>
+  <body class="thank-you-page">
+    <a class="skip-link" href="#confirmation">Skip to order confirmation</a>
+    <div class="page-grain" aria-hidden="true"></div>
+
+    <header class="site-header thank-you-header">
+      <a class="brand" href="./" aria-label="Where It Happened home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 40 40" role="img">
+            <circle cx="20" cy="20" r="17.5"></circle>
+            <path d="M11 24.5c3.2-5.3 6.8-8 10.7-8 2.6 0 5 1.2 7.3 3.6"></path>
+            <circle cx="23.8" cy="15" r="2.4"></circle>
+          </svg>
+        </span>
+        <span>
+          <strong>Where It Happened</strong>
+          <small>Memory Map Studio</small>
+        </span>
+      </a>
+      <a class="button button-small button-ink" href="./#creator">Create another map</a>
+    </header>
+
+    <main class="thank-you-main" id="confirmation">
+      <section class="thank-you-card" aria-labelledby="thank-you-title">
+        <div class="thank-you-seal" aria-hidden="true">✓</div>
+        <p class="eyebrow"><span></span> Checkout complete</p>
+        <h1 id="thank-you-title">Thank you. Your place is now part of the order.</h1>
+        <p class="thank-you-lede">
+          Check your email for the payment receipt and any delivery updates. Custom finished files are sent separately from the checkout receipt.
+        </p>
+
+        <div class="thank-you-order" id="thankYouOrder" hidden>
+          <div>
+            <span>Order reference</span>
+            <strong id="thankYouOrderRef">—</strong>
+          </div>
+          <div>
+            <span>Custom maps</span>
+            <strong id="thankYouItemCount">—</strong>
+          </div>
+          <div>
+            <span>Order subtotal</span>
+            <strong id="thankYouSubtotal">—</strong>
+          </div>
+        </div>
+
+        <div class="thank-you-actions">
+          <button class="button button-outline" id="copyOrderReference" type="button" hidden>Copy order reference</button>
+          <a class="button button-primary" href="./#creator">Create another memory map</a>
+        </div>
+
+        <div class="thank-you-note">
+          <strong>Keep the design details handy.</strong>
+          <p>
+            The exact design links remain in this browser. Do not clear this site’s storage until the finished files have been delivered.
+          </p>
+        </div>
+      </section>
+
+      <aside class="thank-you-aside" aria-label="What happens next">
+        <p class="eyebrow"><span></span> What happens next</p>
+        <ol>
+          <li><span>1</span><p><strong>Receipt</strong>Your payment provider emails the order receipt.</p></li>
+          <li><span>2</span><p><strong>Design review</strong>The saved map links are checked against the order.</p></li>
+          <li><span>3</span><p><strong>Delivery</strong>The completed watermark-free files arrive by email.</p></li>
+        </ol>
+      </aside>
+    </main>
+
+    <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
+  </body>
+</html>

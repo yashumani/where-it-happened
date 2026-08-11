@@ -1,23 +1,47 @@
 # Where It Happened
 
-A mobile-first, browser-only memory-map poster creator. The working name and all copy can be renamed later.
+A mobile-first memory-map storefront and poster creator. Visitors can search for a meaningful place, personalize a map, choose a finished-file package, keep several designs in a local cart, and continue to a hosted checkout once the seller product keys are connected.
 
 ## What works now
 
-- Editorial landing page with six one-click example stories
-- Live MapLibre map using OpenFreeMap styles, with no API key
-- Built-in searchable catalogue of 50+ international cities
+### Discovery and creation
+
+- Premium editorial landing page with direct calls to action
+- Explicit worldwide place search, plus a built-in catalogue of 50+ cities
+- Optional “use my location” action
+- Live MapLibre map using OpenFreeMap styles without an API key
 - Manual latitude/longitude entry for any exact coordinate
-- Editable title, place line, date, small heading, and dedication
+- Editable title, place line, date, heading, and dedication
 - Seven story presets, five map moods, three layouts, and three formats
 - Direct map pan/zoom, marker toggle, label toggle, and recenter
-- Automatic draft saving in `localStorage`
+- Automatic design saving in `localStorage`
 - Stateful sharing through a compact URL hash
-- High-resolution, browser-generated PNG export
-- Browser print view for “Save as PDF”
-- Responsive behavior for 320px phones through desktop
 - Designed offline fallback when live map resources cannot load
-- No account, database, analytics, email collection, or payment integration
+
+### Store and conversion
+
+- Three configurable digital products at $7, $12, and $18
+- Product-selection cards on the landing page and inside the editor
+- Persistent cart stored in the buyer’s browser
+- Multiple custom designs in one cart
+- Edit and remove actions for every cart item
+- Calculated subtotal and checkout review
+- Order packet containing the exact restorable design links
+- Payhip direct-checkout adapter, including multi-item checkout and metadata
+- Customer-friendly fallback while payment keys are not configured
+- Checkout-success page that restores the pending order reference from local storage
+
+### Preview protection
+
+- Free PNG export remains available as a clearly watermarked preview
+- Browser print/PDF preview is also watermarked
+- Finished watermark-free products are represented separately in the store
+
+## Current activation boundary
+
+The storefront, cart, pricing, order packet, and checkout handoff are implemented. Actual card/PayPal payment becomes active after the three seller-owned Payhip product keys are placed in `store-config.js`.
+
+See [CHECKOUT_SETUP.md](./CHECKOUT_SETUP.md) for the exact account and product setup.
 
 ## Run locally
 
@@ -30,61 +54,69 @@ python3 -m http.server 8000
 
 Open `http://localhost:8000`.
 
-## Free deployment choices
+## Search implementation
 
-### Recommended for the public MVP: Cloudflare Pages
+Worldwide search uses the public OpenStreetMap Nominatim endpoint only when a visitor explicitly submits a query. It does **not** use remote autocomplete.
 
-Create a new Pages project and upload/connect this folder. There is no build command and the publish directory is the repository root. This is the cleanest fit for a static public MVP that may later become a business.
+The current guardrails are:
 
-### Temporary prototype preview: GitHub Pages
+- one remote request at a time
+- at least 1.1 seconds between requests
+- local browser caching for repeated searches
+- built-in city results shown before remote results
+- visible OpenStreetMap attribution
+- a single endpoint constant that can be changed quickly if the service must be replaced
 
-1. Create an empty **public** GitHub repository.
-2. Upload this entire folder to the repository root.
-3. In **Settings → Pages**, choose **GitHub Actions** as the source.
-4. Push to `main`. The included `.github/workflows/pages.yml` publishes the site.
+This is suitable only for a moderate early-stage MVP. Move to a dedicated geocoding provider or proxy before meaningful traffic or paid promotion.
 
-GitHub documents usage restrictions for sites primarily used as an online business or SaaS, so use it as a preview environment rather than the long-term commercial host.
+## Checkout architecture
 
-### Netlify
+The buyer’s design remains client-side. When an item is added to the cart, the app stores a sanitized snapshot of the design in `localStorage`. At checkout it creates:
 
-Create a new static-site project and upload/connect this folder. There is no build command and the publish directory is the repository root. Review the current free-plan limits before launch.
+1. A human-readable order reference
+2. A restorable link for every map design
+3. A cart subtotal
+4. A hosted Payhip checkout URL
+5. Compact checkout metadata for a future webhook workflow
 
-## Architecture
+The intended first operational model is **custom digital fulfillment**: the buyer pastes the generated order packet into a required Payhip checkout question, and the finished files are delivered manually after purchase.
 
-This is intentionally build-free:
+## File map
 
-- `index.html` — semantic page structure and editor controls
-- `styles.css` — responsive design system and poster layouts
-- `app.js` — state, map integration, accessibility, persistence, sharing, and export
-- `cities.js` — built-in zero-cost city catalogue
-- `assets/favicon.svg` — original provisional brand mark
+- `index.html` — landing page, shop, editor, cart, and checkout UI
+- `styles.css` — responsive design system, cart, product, and confirmation layouts
+- `app.js` — map state, search, cart, checkout, sharing, persistence, and export
+- `store-config.js` — product catalogue, pricing, currency, and Payhip keys
+- `cities.js` — built-in city catalogue
+- `thank-you.html` / `thank-you.js` — checkout-success experience
+- `CHECKOUT_SETUP.md` — payment activation instructions
+- `_headers` — Cloudflare-compatible CSP and permissions policy
+- `assets/favicon.svg` — provisional brand mark
 
-External runtime resources:
+## External runtime resources
 
 - MapLibre GL JS from unpkg
 - OpenFreeMap vector-map styles and tiles
 - OpenStreetMap-derived map data
+- OpenStreetMap Nominatim for explicit worldwide search
+- Payhip for hosted checkout after configuration
 
-The export is composed locally on a high-resolution canvas. No poster content is uploaded by the app.
+## Free deployment
 
-## Current MVP boundary
+### Current preview: GitHub Pages
 
-City search is deliberately local to avoid violating public geocoding-service policies or requiring a paid key. Users can still enter any latitude and longitude. A later cycle can add a swappable geocoding provider behind the existing location interface.
+The included `.github/workflows/pages.yml` publishes every push to `main`.
 
-OpenFreeMap is a free public service without an SLA. The app therefore includes an offline/failure state, but a live internet connection is required for interactive map tiles.
+### Recommended commercial host: Cloudflare Pages
 
-## Important attribution
+Before public promotion, connect this repository to Cloudflare Pages. There is no build command and the publish directory is the repository root. The included `_headers` file is prepared for the map and search connections.
 
-Keep the visible line:
+## Validation completed
 
-`OpenFreeMap · OpenMapTiles · © OpenStreetMap contributors`
+- JavaScript syntax checks
+- CSS parser checks
+- duplicate-ID and local-file-reference checks
+- browser interaction test for search, product selection, cart, duplicate prevention, checkout review, and mobile layout
+- 390px mobile overflow check
 
-It appears in the editor and generated image.
-
-## Recommended next development cycle
-
-1. Confirm the final brand name and voice.
-2. Add a free-key geocoder only after choosing its provider and reviewing its terms.
-3. Test exported PNGs on Safari/iPhone, Chrome/Android, and desktop browsers.
-4. Add custom-domain, privacy, and terms pages before public promotion.
-5. Validate demand before adding accounts, payments, or physical print fulfillment.
+A final real-payment test must be completed after Payhip keys are added.
