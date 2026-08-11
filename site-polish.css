@@ -1,0 +1,580 @@
+/* Final production polish: stable first paint, resilient geometry, accessibility and checkout-return styles. */
+
+html,
+body {
+  overflow-x: clip;
+}
+
+.atelier-theme .site-header,
+.atelier-theme .hero,
+.atelier-theme .statement-strip,
+.atelier-theme .examples,
+.atelier-theme .shop,
+.atelier-theme .how,
+.atelier-theme .creator-section,
+.atelier-theme .closing,
+.atelier-theme .site-footer {
+  min-width: 0;
+}
+
+.atelier-theme .header-nav > a,
+.atelier-theme .header-cart-button,
+.atelier-theme .wizard-step-tab,
+.atelier-theme .footer-links a,
+.atelier-theme .policy-aside nav a {
+  min-height: 46px;
+}
+
+.atelier-theme .header-nav > a,
+.atelier-theme .footer-links a,
+.atelier-theme .policy-aside nav a {
+  display: inline-flex;
+  align-items: center;
+}
+
+.atelier-theme .hero-place-search input,
+.atelier-theme .hero-place-search button,
+.atelier-theme input,
+.atelier-theme select,
+.atelier-theme textarea {
+  min-height: 44px;
+}
+
+.atelier-theme .hero-place-search input::placeholder,
+.atelier-theme .control-panel input::placeholder,
+.atelier-theme .control-panel textarea::placeholder,
+.atelier-theme .checkout-dialog input::placeholder,
+.atelier-theme .checkout-dialog textarea::placeholder {
+  opacity: 1;
+  color: rgba(247, 243, 233, 0.58);
+}
+
+.atelier-theme .hero-place-search > p,
+.atelier-theme .hero-notes,
+.atelier-theme .hero-actions .text-link,
+.atelier-theme .brand small {
+  color: rgba(247, 243, 233, 0.58);
+}
+
+.atelier-theme .creator-heading::before {
+  grid-column: 1 / -1;
+  margin-bottom: 0;
+}
+
+.atelier-theme .creator-heading > div {
+  grid-column: 1;
+}
+
+.atelier-theme .creator-heading > p {
+  grid-column: 2;
+}
+
+.atelier-theme .creator-workspace,
+.atelier-theme .creator-workspace.wizard-enabled,
+.atelier-theme .control-panel,
+.atelier-theme .studio-wizard,
+.atelier-theme .wizard-stage,
+.atelier-theme .wizard-step,
+.atelier-theme .preview-panel,
+.atelier-theme .poster-stage,
+.atelier-theme #posterForm,
+.atelier-theme .purchase-bar,
+.atelier-theme .export-actions {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.atelier-theme .wizard-step-list,
+.atelier-theme .occasion-grid,
+.atelier-theme .theme-grid,
+.atelier-theme .format-grid,
+.atelier-theme .coordinate-grid,
+.atelier-theme .two-column-fields {
+  min-width: 0;
+}
+
+.atelier-theme .wizard-step-heading h3,
+.atelier-theme .wizard-step-description,
+.atelier-theme .field-help,
+.atelier-theme .location-search-meta,
+.atelier-theme .wizard-summary-card strong {
+  overflow-wrap: anywhere;
+}
+
+.atelier-theme .map-fallback {
+  isolation: isolate;
+}
+
+.atelier-theme .map-fallback[hidden] {
+  display: none;
+}
+
+.atelier-theme .map-fallback[data-state="loading"]::after {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  left: 50%;
+  width: 34px;
+  height: 34px;
+  transform: translate(-50%, -50%);
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  content: "";
+  animation: map-loading-spin 800ms linear infinite;
+}
+
+.atelier-theme .map-fallback[data-state="loading"] svg {
+  opacity: 0.55;
+}
+
+.atelier-theme .map-fallback[data-state="loading"] > div {
+  opacity: 0.72;
+}
+
+@keyframes map-loading-spin {
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.scroll-story-theme .scroll-process .steps > li {
+  visibility: hidden;
+  transition: transform 420ms cubic-bezier(.2,.7,.2,1), color 260ms ease;
+}
+
+.scroll-story-theme .scroll-process .steps > li.is-scroll-active {
+  visibility: visible;
+}
+
+.scroll-story-theme .scroll-archive:not(.is-in-view) .example-grid,
+.scroll-story-theme .scroll-editions:not(.is-in-view) .product-card,
+.scroll-story-theme .scroll-closing:not(.is-in-view) h2 {
+  will-change: auto;
+}
+
+.scroll-story-theme .scroll-archive.is-in-view .example-grid,
+.scroll-story-theme .scroll-editions.is-in-view .product-card,
+.scroll-story-theme .scroll-closing.is-in-view h2 {
+  will-change: transform;
+}
+
+.atelier-theme .buying-confidence,
+.atelier-theme .site-footer,
+.policy-page .policy-content {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 900px;
+}
+
+.atelier-theme .product-select-button,
+.atelier-theme .wizard-next-button,
+.atelier-theme .wizard-back-button,
+.atelier-theme .wizard-preview-button,
+.atelier-theme .cart-footer .button,
+.atelier-theme .checkout-dialog .button {
+  min-height: 48px;
+}
+
+.atelier-theme .footer-links,
+.atelier-theme .site-footer > * {
+  min-width: 0;
+}
+
+.atelier-theme .footer-links a,
+.atelier-theme .footer-attribution {
+  overflow-wrap: anywhere;
+}
+
+/* Checkout return page */
+.atelier-theme.thank-you-page {
+  min-height: 100svh;
+  background:
+    radial-gradient(circle at 82% 18%, rgba(61, 99, 116, 0.28), transparent 30%),
+    #071722;
+  color: #f8f4ea;
+}
+
+.atelier-theme.thank-you-page .thank-you-header {
+  position: relative;
+  background: transparent;
+  border-bottom-color: rgba(248, 244, 234, 0.14);
+}
+
+.atelier-theme .thank-you-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.52fr);
+  gap: clamp(36px, 7vw, 100px);
+  width: min(calc(100% - clamp(32px, 8vw, 128px)), 1280px);
+  min-height: calc(100svh - 96px);
+  margin: 0 auto;
+  padding: clamp(72px, 10vw, 140px) 0;
+  align-items: center;
+}
+
+.atelier-theme .thank-you-card {
+  padding: clamp(32px, 6vw, 76px);
+  border: 1px solid rgba(248, 244, 234, 0.17);
+  background: rgba(11, 35, 49, 0.72);
+  box-shadow: 0 40px 110px rgba(0, 0, 0, 0.28);
+}
+
+.atelier-theme .thank-you-seal {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  margin-bottom: 32px;
+  border: 1px solid rgba(212, 134, 86, 0.58);
+  border-radius: 50%;
+  color: #d48656;
+  font-size: 1.4rem;
+}
+
+.atelier-theme .thank-you-card h1 {
+  max-width: 840px;
+  margin: 14px 0 24px;
+  font-family: var(--atelier-display);
+  font-size: clamp(3rem, 7vw, 7.4rem);
+  font-weight: 400;
+  line-height: 0.88;
+  letter-spacing: -0.055em;
+}
+
+.atelier-theme .thank-you-lede {
+  max-width: 700px;
+  color: rgba(248, 244, 234, 0.66);
+  font-size: 1.05rem;
+  line-height: 1.75;
+}
+
+.atelier-theme .thank-you-order {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin: 38px 0;
+  background: rgba(248, 244, 234, 0.12);
+}
+
+.atelier-theme .thank-you-order > div {
+  display: grid;
+  gap: 8px;
+  padding: 20px;
+  background: #0b2230;
+}
+
+.atelier-theme .thank-you-order span,
+.atelier-theme .thank-you-aside li p,
+.atelier-theme .thank-you-note p {
+  color: rgba(248, 244, 234, 0.58);
+}
+
+.atelier-theme .thank-you-order strong {
+  overflow-wrap: anywhere;
+  font-size: 1rem;
+}
+
+.atelier-theme .thank-you-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-block: 28px;
+}
+
+.atelier-theme .thank-you-note {
+  padding-top: 26px;
+  border-top: 1px solid rgba(248, 244, 234, 0.15);
+}
+
+.atelier-theme .thank-you-aside {
+  padding: clamp(26px, 4vw, 48px);
+  border-top: 1px solid rgba(212, 134, 86, 0.55);
+}
+
+.atelier-theme .thank-you-aside ol {
+  display: grid;
+  gap: 28px;
+  padding: 0;
+  list-style: none;
+}
+
+.atelier-theme .thank-you-aside li {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 18px;
+}
+
+.atelier-theme .thank-you-aside li > span {
+  color: #d48656;
+  font-family: var(--atelier-display);
+  font-size: 2.2rem;
+}
+
+.atelier-theme .thank-you-aside li p {
+  margin: 0;
+}
+
+.atelier-theme .thank-you-aside li strong {
+  display: block;
+  margin-bottom: 5px;
+  color: #f8f4ea;
+}
+
+@media (max-width: 980px) {
+  .atelier-theme .creator-heading::before,
+  .atelier-theme .creator-heading > div,
+  .atelier-theme .creator-heading > p {
+    grid-column: 1;
+  }
+
+  .atelier-theme .creator-workspace.wizard-enabled {
+    display: block;
+    width: min(calc(100% - 24px), 920px);
+  }
+
+  .atelier-theme .control-panel,
+  .atelier-theme .preview-panel {
+    width: 100%;
+  }
+
+  .scroll-story-theme .scroll-process .steps > li {
+    visibility: visible;
+  }
+
+  .atelier-theme .thank-you-main {
+    grid-template-columns: 1fr;
+    width: min(calc(100% - 32px), 820px);
+  }
+
+  .atelier-theme .thank-you-aside {
+    padding-inline: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .atelier-theme .site-header {
+    min-width: 0;
+  }
+
+  .atelier-theme .header-cart-button {
+    display: inline-flex;
+    min-width: 44px;
+    padding-inline: 10px;
+    justify-content: center;
+  }
+
+  .atelier-theme .header-cart-button svg {
+    display: block;
+    width: 19px;
+    height: 19px;
+  }
+
+  .atelier-theme .header-cart-button > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .atelier-theme .wizard-step-list {
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+
+  .atelier-theme .wizard-step-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .atelier-theme .wizard-footer {
+    grid-template-columns: minmax(92px, auto) minmax(0, 1fr);
+  }
+
+  .atelier-theme .wizard-footer-hint {
+    display: none;
+  }
+
+  .atelier-theme .wizard-next-button {
+    min-width: 0;
+  }
+
+  .atelier-theme .site-footer {
+    grid-template-columns: 1fr;
+  }
+
+  .atelier-theme .site-footer .footer-links {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .atelier-theme .thank-you-order {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 420px) {
+  .atelier-theme .creator-workspace.wizard-enabled {
+    width: calc(100% - 16px);
+  }
+
+  .atelier-theme .control-panel-header,
+  .atelier-theme .wizard-progress,
+  .atelier-theme .wizard-step,
+  .atelier-theme .wizard-footer {
+    padding-inline: 16px;
+  }
+
+  .atelier-theme .occasion-grid,
+  .atelier-theme .theme-grid,
+  .atelier-theme .format-grid,
+  .atelier-theme .two-column-fields,
+  .atelier-theme .coordinate-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .atelier-theme .site-footer .footer-links {
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atelier-theme .map-fallback[data-state="loading"]::after {
+    animation: none;
+  }
+
+  .scroll-story-theme .scroll-process .steps > li {
+    visibility: visible;
+  }
+}
+
+/* Final target-size and reduced-motion safeguards found during rendered review. */
+.atelier-theme .brand,
+.atelier-theme .header-nav .button-ink,
+.atelier-theme .hero-actions .text-link,
+.atelier-theme #resetDesign {
+  min-height: 46px !important;
+}
+
+.atelier-theme .brand,
+.atelier-theme .hero-actions .text-link,
+.atelier-theme #resetDesign {
+  display: inline-flex;
+  align-items: center;
+}
+
+.atelier-theme .wizard-step-tab,
+.atelier-theme .footer-links a {
+  min-width: 44px;
+}
+
+.atelier-theme .hero-actions .text-link {
+  padding-inline: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-story-theme .scroll-process {
+    min-height: auto;
+    padding-block: clamp(72px, 10vw, 130px);
+  }
+
+  .scroll-story-theme .scroll-process .section-heading,
+  .scroll-story-theme .scroll-process .steps {
+    position: static;
+    width: min(100%, 760px);
+    margin-inline: auto;
+  }
+
+  .scroll-story-theme .scroll-process .steps {
+    display: grid;
+    gap: 20px;
+    padding-bottom: 0;
+  }
+
+  .scroll-story-theme .scroll-process .steps > li {
+    grid-area: auto;
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.atelier-theme.thank-you-page .button-outline {
+  border-color: rgba(248, 244, 234, 0.42);
+  background: transparent;
+  color: #f8f4ea;
+}
+
+.atelier-theme.thank-you-page .button-outline:hover {
+  border-color: #d48656;
+  background: rgba(212, 134, 86, 0.12);
+}
+
+.atelier-theme.thank-you-page .button-primary {
+  border-color: #d48656;
+  background: #d48656;
+  color: #071722;
+}
+
+/* Keep the full hero message semantic; the previous second line existed only as generated CSS. */
+.atelier-theme .hero h1::after {
+  display: none;
+  content: none;
+}
+
+.atelier-theme .hero h1 > span,
+.atelier-theme .hero h1 > em {
+  display: block;
+}
+
+.atelier-theme .hero h1 > em {
+  margin-left: clamp(24px, 7vw, 110px);
+  color: transparent;
+  font-weight: inherit;
+  font-style: italic;
+  -webkit-text-stroke: 1px rgba(247, 243, 233, 0.75);
+}
+
+@media (max-width: 760px) {
+  .atelier-theme .hero h1 > em {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .atelier-theme .hero.section-shell {
+    width: 100%;
+  }
+}
+
+/* Decorative poster typography should not add an unrelated heading to the document outline. */
+.atelier-theme .sample-caption .sample-city {
+  margin: 0;
+  font-family: var(--atelier-display);
+  font-size: clamp(36px, 5vw, 54px);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  line-height: 1;
+}
+
+/* Prefer opaque sticky surfaces during scroll; they look the same at normal contrast and avoid repeated backdrop compositing. */
+.atelier-theme .site-header.is-scrolled,
+.atelier-theme .control-panel.is-guided,
+.atelier-theme .wizard-progress,
+.atelier-theme .wizard-footer,
+.scroll-story-theme .scroll-editions .shop-assurance {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.atelier-theme .control-panel.is-guided,
+.atelier-theme .wizard-progress {
+  background: #f5f0e6;
+}
+
+.atelier-theme .wizard-footer {
+  background: #fffdf7;
+}
+
+.scroll-story-theme .scroll-editions .shop-assurance {
+  background: rgba(242, 237, 226, 0.97);
+}

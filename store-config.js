@@ -1,5 +1,3 @@
-import "./atelier.js";
-
 /**
  * Public storefront configuration.
  *
@@ -83,3 +81,5 @@ export const STORE_CONFIG = Object.freeze({
 });
 
 export const PRODUCT_LIST = Object.freeze(Object.values(STORE_CONFIG.products));
+
+export const PRODUCT_BY_ID = STORE_CONFIG.products;

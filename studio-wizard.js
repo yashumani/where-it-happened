@@ -283,17 +283,23 @@ function bindWizardEvents(state, previewButton) {
   });
 
   const reviewProduct = $("#wizardProductSelect");
-  reviewProduct?.addEventListener("change", () => {
+  const syncProductFromReview = () => {
     const source = $("#purchaseProductSelect");
-    if (!source) return;
+    if (!source || !reviewProduct) return;
     source.value = reviewProduct.value;
     source.dispatchEvent(new Event("change", { bubbles: true }));
     window.setTimeout(() => syncReview(state), 0);
-  });
+  };
+  reviewProduct?.addEventListener("input", syncProductFromReview);
+  reviewProduct?.addEventListener("change", syncProductFromReview);
 
   const form = $("#posterForm");
-  form.addEventListener("input", () => syncReview(state));
-  form.addEventListener("change", () => syncReview(state));
+  form.addEventListener("input", (event) => {
+    if (event.target !== reviewProduct) syncReview(state);
+  });
+  form.addEventListener("change", (event) => {
+    if (event.target !== reviewProduct) syncReview(state);
+  });
   form.addEventListener("click", (event) => {
     if (event.target.closest("button, [role='option']")) window.setTimeout(() => syncReview(state), 0);
   });
@@ -331,6 +337,16 @@ function goToStep(state, requested, { focus = true, persist = true, scroll = tru
     step.setAttribute("aria-hidden", String(!active));
     step.classList.toggle("is-active", active);
   });
+
+  const activeProgressButton = state.progressButtons[next];
+  if (scroll && activeProgressButton && window.matchMedia("(max-width: 980px)").matches) {
+    window.requestAnimationFrame(() => {
+      const list = activeProgressButton.closest(".wizard-step-list");
+      if (!list) return;
+      const left = activeProgressButton.offsetLeft - (list.clientWidth - activeProgressButton.offsetWidth) / 2;
+      list.scrollTo({ left: Math.max(0, left), behavior: "smooth" });
+    });
+  }
 
   if (next === state.steps.length - 1) syncReview(state);
   renderProgress(state);

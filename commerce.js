@@ -6,6 +6,7 @@ const ORDER_DETAILS_KEY = "where-it-happened.order-details.v1";
 const SELECTED_PRODUCT_KEY = "where-it-happened.selected-product.v1";
 const CART_VERSION = 2;
 const MAX_CART_ITEMS = 12;
+const MAX_BACKUP_BYTES = 2 * 1024 * 1024;
 
 const $ = (selector, scope = document) => scope.querySelector(selector);
 const $$ = (selector, scope = document) => [...scope.querySelectorAll(selector)];
@@ -17,9 +18,6 @@ export function initCommerce({
   showToast,
   scrollToCreator
 }) {
-  installStorefrontStyles();
-  injectStorefrontEnhancements();
-
   const elements = {
     cartOpen: $("#cartOpenButton"),
     cartCount: $("#cartCount"),
@@ -603,13 +601,8 @@ export function initCommerce({
           version: CART_VERSION,
           updatedAt: raw.updatedAt || new Date().toISOString(),
           items: raw.items
-            .filter((item) => item && getProduct(item.productId) && item.design && typeof item.designUrl === "string")
-            .map((item) => ({
-              ...item,
-              id: String(item.id || createId()),
-              design: sanitizeDesignSnapshot(item.design),
-              designUrl: String(item.designUrl)
-            }))
+            .map(sanitizeStoredCartItem)
+            .filter(Boolean)
             .slice(-MAX_CART_ITEMS)
         };
       } catch {
@@ -666,18 +659,14 @@ export function initCommerce({
     if (!file) return;
 
     try {
+      if (file.size > MAX_BACKUP_BYTES) throw new Error("The backup file is too large");
       const payload = JSON.parse(await file.text());
       if (payload?.app !== "where-it-happened" || !Array.isArray(payload?.cart?.items)) {
         throw new Error("Unknown backup format");
       }
       const restoredItems = payload.cart.items
-        .filter((item) => item && getProduct(item.productId) && item.design && typeof item.designUrl === "string")
-        .map((item) => ({
-          ...item,
-          id: String(item.id || createId()),
-          design: sanitizeDesignSnapshot(item.design),
-          designUrl: String(item.designUrl)
-        }))
+        .map(sanitizeStoredCartItem)
+        .filter(Boolean)
         .slice(-MAX_CART_ITEMS);
 
       if (!restoredItems.length) throw new Error("The backup contains no usable designs");
@@ -700,6 +689,33 @@ export function initCommerce({
     } catch (error) {
       console.error("Cart restore failed.", error);
       showToast("Backup could not be restored", "Choose a cart JSON file exported by this website.", true);
+    }
+  }
+
+  function sanitizeStoredCartItem(item) {
+    if (!item || !getProduct(item.productId) || !item.design) return null;
+    const designUrl = normalizeDesignUrl(item.designUrl);
+    if (!designUrl) return null;
+    const now = new Date().toISOString();
+    return {
+      id: String(item.id || createId()).slice(0, 120),
+      productId: String(item.productId),
+      design: sanitizeDesignSnapshot(item.design),
+      designUrl,
+      addedAt: String(item.addedAt || now).slice(0, 40),
+      updatedAt: String(item.updatedAt || item.addedAt || now).slice(0, 40)
+    };
+  }
+
+  function normalizeDesignUrl(value) {
+    try {
+      const imported = new URL(String(value || ""), window.location.href);
+      if (!imported.hash.startsWith("#design=")) return "";
+      const local = new URL(window.location.href);
+      local.hash = imported.hash;
+      return local.toString();
+    } catch {
+      return "";
     }
   }
 
@@ -761,125 +777,6 @@ export function initCommerce({
       currency: STORE_CONFIG.currency,
       maximumFractionDigits: 0
     }).format(value);
-  }
-}
-
-function installStorefrontStyles() {
-  if (document.querySelector('link[data-storefront-v2]')) return;
-  const link = document.createElement("link");
-  link.rel = "stylesheet";
-  link.href = new URL("./storefront-v2.css", import.meta.url).href;
-  link.dataset.storefrontV2 = "";
-  document.head.append(link);
-}
-
-function injectStorefrontEnhancements() {
-  if (!$("#cartResumeBanner")) {
-    const header = $(".site-header");
-    header?.insertAdjacentHTML(
-      "afterend",
-      `<aside class="cart-resume-banner" id="cartResumeBanner" hidden aria-label="Saved cart reminder">
-        <div><strong data-resume-count>Saved designs</strong><span data-resume-total>$0</span></div>
-        <p>Your cart is stored in this browser.</p>
-        <button type="button" id="cartResumeOpen">Resume cart</button>
-      </aside>`
-    );
-  }
-
-  if (!$("#storeStatusBanner")) {
-    const productGrid = $("#shop .product-grid");
-    productGrid?.insertAdjacentHTML(
-      "beforebegin",
-      `<div class="store-status-banner" id="storeStatusBanner" role="status">
-        <span data-store-status-icon aria-hidden="true">○</span>
-        <div><strong data-store-status-heading>Public preview storefront</strong><p data-store-status-detail>Checking checkout status…</p></div>
-      </div>`
-    );
-    productGrid?.insertAdjacentHTML(
-      "afterend",
-      `<section class="product-comparison" aria-labelledby="product-comparison-title">
-        <div class="product-comparison-heading">
-          <p class="eyebrow"><span></span> Compare the finished files</p>
-          <h3 id="product-comparison-title">Choose by how you plan to keep the memory.</h3>
-          <p>Every product begins with the exact design in your browser. The difference is the file set and level of preparation.</p>
-        </div>
-        <div class="product-comparison-rows" id="productComparisonRows"></div>
-      </section>`
-    );
-  }
-
-  if (!$("#buyingConfidence")) {
-    const closing = $(".closing");
-    closing?.insertAdjacentHTML(
-      "beforebegin",
-      `<section class="buying-confidence section-shell" id="buyingConfidence" aria-labelledby="buying-confidence-title">
-        <div class="section-heading split-heading">
-          <div><p class="eyebrow"><span></span> Before you order</p><h2 id="buying-confidence-title">A clear handoff from your design to the finished files.</h2></div>
-          <p>The current MVP keeps the creative work in your browser and uses a hosted checkout only after payment links are connected.</p>
-        </div>
-        <div class="confidence-grid">
-          <article><span>01</span><h3>Design preserved</h3><p>The cart stores your exact coordinates, wording, theme, layout, format, and restorable link.</p></article>
-          <article><span>02</span><h3>Hosted payment</h3><p>No card details are entered on this website. Payment will happen with the connected checkout provider.</p></article>
-          <article><span>03</span><h3>Human quality check</h3><p>Personalized paid files are reviewed against the saved design before delivery.</p></article>
-          <article><span>04</span><h3>Digital delivery</h3><p>Products are digital-only in this cycle. The standard target is 2–3 business days.</p></article>
-        </div>
-        <div class="delivery-steps">
-          <p class="eyebrow"><span></span> What happens next</p>
-          <ol>
-            <li><strong>1</strong><div><h3>Create and review</h3><p>Finish the map and check every line of text.</p></div></li>
-            <li><strong>2</strong><div><h3>Add the exact design</h3><p>Choose a product and save that version to the browser cart.</p></div></li>
-            <li><strong>3</strong><div><h3>Pay or save a request</h3><p>Use hosted checkout when connected, or download a complete order request during the preview.</p></div></li>
-            <li><strong>4</strong><div><h3>Receive the files</h3><p>The final watermark-free files are prepared and delivered digitally.</p></div></li>
-          </ol>
-        </div>
-        <div class="store-faq" aria-labelledby="store-faq-title">
-          <div><p class="eyebrow"><span></span> Questions before buying</p><h3 id="store-faq-title">The practical details.</h3></div>
-          <div>
-            <details><summary>Is this a physical poster?</summary><p>No. The current products are digital file packages. Physical printing and shipping are not included yet.</p></details>
-            <details><summary>Can I edit a design after adding it to the cart?</summary><p>Yes. Open the cart, choose “Edit design,” make the changes, and add the updated version again.</p></details>
-            <details><summary>Are the free downloads usable?</summary><p>Yes, for evaluation and sharing. Free PNG and print previews include a visible preview watermark.</p></details>
-            <details><summary>When will paid files arrive?</summary><p>The working delivery target is 2–3 business days after payment and complete design details are received.</p></details>
-            <details><summary>What happens if checkout is not connected?</summary><p>You can still save the cart, copy the complete order brief, or download an order request. No payment is collected in that mode.</p></details>
-          </div>
-        </div>
-      </section>`
-    );
-  }
-
-  if (!$("#checkoutCustomerDetails")) {
-    const checkoutStatus = $("#checkoutStatus");
-    checkoutStatus?.insertAdjacentHTML(
-      "beforebegin",
-      `<section class="checkout-customer-details" id="checkoutCustomerDetails" aria-labelledby="checkout-details-title">
-        <div><h3 id="checkout-details-title">Order details</h3><p>These fields stay in this browser and are included only in the copied order brief.</p></div>
-        <div class="checkout-fields">
-          <label><span>Name <small>optional</small></span><input id="orderName" autocomplete="name" maxlength="80" placeholder="Your name" /></label>
-          <label><span>Email <small>optional here</small></span><input id="orderEmail" type="email" autocomplete="email" maxlength="120" placeholder="you@example.com" /></label>
-          <label><span>Gift recipient <small>optional</small></span><input id="orderGiftRecipient" maxlength="80" placeholder="Who is this for?" /></label>
-          <label class="checkout-note-field"><span>Notes <small>optional</small></span><textarea id="orderNote" maxlength="500" rows="3" placeholder="Delivery date, caption preference, or anything to review"></textarea></label>
-        </div>
-        <label class="checkout-consent"><input id="orderTerms" type="checkbox" /><span>I have reviewed the design and agree to the <a href="./terms.html" target="_blank" rel="noopener">terms</a>, <a href="./delivery.html" target="_blank" rel="noopener">delivery policy</a>, and <a href="./refunds.html" target="_blank" rel="noopener">refund policy</a>.</span></label>
-      </section>`
-    );
-  }
-
-  if (!$("#downloadCartButton")) {
-    const clearButton = $("#cartClearButton");
-    clearButton?.insertAdjacentHTML(
-      "beforebegin",
-      `<div class="cart-portability">
-        <button class="button button-outline" id="downloadCartButton" type="button" disabled>Save cart backup</button>
-        <label class="button button-outline" for="restoreCartInput">Restore backup<input id="restoreCartInput" type="file" accept="application/json,.json" hidden /></label>
-      </div>`
-    );
-  }
-
-  const footerLinks = $(".footer-links");
-  if (footerLinks && !footerLinks.querySelector('[href="./privacy.html"]')) {
-    footerLinks.insertAdjacentHTML(
-      "beforeend",
-      `<a href="./privacy.html">Privacy</a><a href="./terms.html">Terms</a><a href="./refunds.html">Refunds</a><a href="./delivery.html">Delivery</a>`
-    );
   }
 }
 

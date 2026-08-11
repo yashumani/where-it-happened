@@ -49,6 +49,21 @@ The public storefront is live. Secure payment is intentionally disabled because 
 - Policy version included in order briefs
 - Responsive behavior from 320px phones through desktop
 
+## Design and performance architecture
+
+- `site.css` is the production stylesheet served by every public page. It is generated from the maintainable source styles with `node build-site-css.mjs`, eliminating runtime stylesheet injection and first-paint layout shifts.
+- The first screen does not download MapLibre. The map engine and its stylesheet are loaded on demand as the creator approaches the viewport or the visitor starts a creator action.
+- The seven-step studio and scroll-storytelling modules are deferred until they are useful.
+- Scroll effects are gated by visibility, batched with `requestAnimationFrame`, and disabled for reduced-motion visitors.
+- The storefront, comparison, cart-recovery, checkout-details, FAQ, and policy links are present in the static HTML so they do not move the page after JavaScript starts.
+- The checkout-return page accepts the current and legacy local order shapes, but it never treats local browser state as proof of payment.
+
+Rebuild the production stylesheet after changing any source CSS file:
+
+```bash
+node build-site-css.mjs
+```
+
 ## Run locally
 
 The site uses JavaScript modules, so serve the folder instead of opening `index.html` directly.
@@ -84,9 +99,15 @@ Until automatic payment verification and file generation are added, paid files r
 ## File map
 
 - `index.html` — landing page, shop, creator, cart, and checkout dialogs
+- `site.css` — generated production stylesheet loaded by public pages
 - `styles.css` — core responsive design system and map-poster layouts
-- `storefront-v2.css` — conversion, checkout, policy, and cart-recovery styles
-- `app.js` — design state, place search, map integration, persistence, sharing, and preview export
+- `storefront-v2.css` — conversion, checkout, policy, and cart-recovery source styles
+- `atelier-*.css`, `studio-wizard.css`, `scroll-story.css`, `site-polish.css` — editorial, guided-creator, motion, and final production source styles
+- `build-site-css.mjs` — deterministic stylesheet bundler
+- `app.js` — design state, place search, lazy map integration, persistence, sharing, and preview export
+- `atelier.js` — deferred presentation orchestration
+- `studio-wizard.js` — lazy seven-step creator flow
+- `scroll-story.js` — visibility-gated scroll storytelling
 - `commerce.js` — product selection, browser cart, order details, backups, order requests, and checkout handoff
 - `store-config.js` — product catalogue, prices, fulfillment details, policies, and hosted checkout URLs
 - `cities.js` — built-in city catalogue

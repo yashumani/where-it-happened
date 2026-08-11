@@ -1,11 +1,11 @@
 {
-  "name": "Where It Happened \u2014 Memory Map Studio",
-  "short_name": "Memory Maps",
-  "description": "Search a meaningful place, design a personalized memory map, and save the exact version to a browser cart.",
+  "name": "Where It Happened \u2014 Cartographic Memory Atelier",
+  "short_name": "Where It Happened",
+  "description": "Turn a meaningful place into a personal map artwork, then preview, share, or save the exact design to your cart.",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#f3efe6",
-  "theme_color": "#f3efe6",
+  "background_color": "#071722",
+  "theme_color": "#071722",
   "icons": [
     {
       "src": "./assets/favicon.svg",

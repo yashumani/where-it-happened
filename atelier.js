@@ -1,86 +1,43 @@
-const atelierStyleSheets = [
-  "atelier-1.css",
-  "atelier-2.css",
-  "atelier-3.css",
-  "atelier-4.css",
-  "studio-wizard.css",
-  "scroll-story.css"
-];
-
-for (const file of atelierStyleSheets) {
-  if (document.head.querySelector(`link[data-atelier-style="${file}"]`)) continue;
-  const link = document.createElement("link");
-  link.rel = "stylesheet";
-  link.href = `./${file}`;
-  link.dataset.atelierStyle = file;
-  document.head.append(link);
-}
-
-document.body.classList.add("atelier-theme", "wizard-loading");
-document.title = "Where It Happened — Cartographic Memory Atelier";
-
-const themeColor = document.querySelector('meta[name="theme-color"]');
-if (themeColor) themeColor.content = "#071722";
-const description = document.querySelector('meta[name="description"]');
-if (description) {
-  description.content = "Turn a meaningful city, street, or landmark into an editorial memory-map artwork made to keep, print, or give.";
-}
-const openGraphTitle = document.querySelector('meta[property="og:title"]');
-if (openGraphTitle) openGraphTitle.content = "Where It Happened — Cartographic Memory Atelier";
-const openGraphDescription = document.querySelector('meta[property="og:description"]');
-if (openGraphDescription) {
-  openGraphDescription.content = "Find the place that changed your story and compose its coordinates as a personal map artwork.";
-}
-
-const setText = (selector, value) => {
-  const element = document.querySelector(selector);
-  if (element) element.textContent = value;
-};
-const setEyebrow = (selector, value) => {
-  const element = document.querySelector(selector);
-  if (element) element.innerHTML = `<span aria-hidden="true"></span> ${value}`;
-};
-
-setEyebrow(".hero .eyebrow", "A place is never just a place");
-setText("#hero-title", "Some places");
-setText(
-  ".hero-lede",
-  "Find the street, city, or landmark that changed your story. Turn its coordinates into a personal artwork made to keep, print, or give."
-);
-setText('label[for="heroPlaceSearch"]', "Enter a place that matters");
-
-const statementLines = document.querySelectorAll(".statement-strip p");
-if (statementLines[0]) statementLines[0].textContent = "WHERE IT";
-if (statementLines[1]) statementLines[1].textContent = "HAPPENED";
-
-setText("#examples-title", "An archive of beginnings, homes, promises, and returns.");
-setText("#shop-title", "Choose how the memory should live.");
-setText("#how-title", "From remembered place to finished piece.");
-setText("#creator-title", "Compose the place exactly as you remember it.");
-setText("#closing-title", "Leave the pin.");
-
-const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-const body = document.body;
+const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
 const header = document.querySelector(".site-header");
+const hero = document.querySelector(".hero");
 const heroArt = document.querySelector(".hero-art");
+const creator = document.querySelector("#creator");
 
-body.classList.add("atelier-motion");
+let headerFrame = 0;
+let pointerFrame = 0;
+let pointerEnabled = false;
+let wizardPromise = null;
 
-const revealGroups = [
-  ".hero-copy",
-  ".hero-art",
-  ".section-heading",
-  ".example-card",
-  ".product-card",
-  ".steps li",
-  ".creator-heading",
-  ".closing > *"
-];
-const revealItems = [...document.querySelectorAll(revealGroups.join(","))];
+function updateHeader() {
+  headerFrame = 0;
+  header?.classList.toggle("is-scrolled", window.scrollY > 26);
+}
 
-if (reducedMotion || !("IntersectionObserver" in window)) {
-  revealItems.forEach((item) => item.classList.add("is-revealed"));
-} else {
+function scheduleHeaderUpdate() {
+  if (headerFrame) return;
+  headerFrame = window.requestAnimationFrame(updateHeader);
+}
+
+function revealEditorialElements() {
+  const selectors = [
+    ".hero-copy",
+    ".hero-art",
+    ".section-heading",
+    ".example-card",
+    ".product-card",
+    ".steps li",
+    ".creator-heading",
+    ".closing > *"
+  ];
+  const items = [...document.querySelectorAll(selectors.join(","))];
+  if (!items.length) return;
+
+  if (reducedMotion || !("IntersectionObserver" in window)) {
+    items.forEach((item) => item.classList.add("is-revealed"));
+    return;
+  }
+
   const observer = new IntersectionObserver(
     (entries) => {
       for (const entry of entries) {
@@ -89,50 +46,104 @@ if (reducedMotion || !("IntersectionObserver" in window)) {
         observer.unobserve(entry.target);
       }
     },
-    { rootMargin: "0px 0px -8%", threshold: 0.06 }
+    { rootMargin: "0px 0px -8%", threshold: 0.05 }
   );
-  revealItems.forEach((item) => observer.observe(item));
+  items.forEach((item) => observer.observe(item));
 }
 
-const updateHeader = () => header?.classList.toggle("is-scrolled", window.scrollY > 26);
-updateHeader();
-window.addEventListener("scroll", updateHeader, { passive: true });
+function loadWizard() {
+  if (wizardPromise) return wizardPromise;
+  wizardPromise = import("./studio-wizard.js").catch((error) => {
+    console.error("The guided creator could not load.", error);
+    document.body.classList.remove("wizard-loading");
+    return null;
+  });
+  return wizardPromise;
+}
 
-if (!reducedMotion && heroArt && window.matchMedia("(pointer: fine)").matches) {
-  let x = 0;
-  let y = 0;
-  let frame = 0;
-  const draw = () => {
-    frame = 0;
-    heroArt.style.setProperty("--pointer-x", x.toFixed(3));
-    heroArt.style.setProperty("--pointer-y", y.toFixed(3));
+function scheduleWizard() {
+  if (!creator) {
+    document.body.classList.remove("wizard-loading");
+    return;
+  }
+
+  const prewarm = () => void loadWizard();
+  document.querySelectorAll('a[href="#creator"], [data-example], #heroPlaceSearchForm').forEach((element) => {
+    element.addEventListener("pointerenter", prewarm, { once: true, passive: true });
+    element.addEventListener("focusin", prewarm, { once: true });
+    element.addEventListener("click", prewarm, { once: true });
+  });
+
+  if (!("IntersectionObserver" in window)) {
+    window.setTimeout(prewarm, 500);
+    return;
+  }
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      observer.disconnect();
+      prewarm();
+    },
+    { rootMargin: "1600px 0px", threshold: 0 }
+  );
+  observer.observe(creator);
+}
+
+function scheduleScrollStory() {
+  const load = () => {
+    import("./scroll-story.js").catch((error) => {
+      console.error("The scroll-story design layer could not load.", error);
+    });
   };
+
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(load, { timeout: 900 });
+  } else {
+    window.setTimeout(load, 120);
+  }
+}
+
+function enablePointerDepth() {
+  if (reducedMotion || !heroArt || !window.matchMedia?.("(pointer: fine)")?.matches) return;
+
+  if (hero && "IntersectionObserver" in window) {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        pointerEnabled = Boolean(entry?.isIntersecting);
+      },
+      { rootMargin: "120px 0px", threshold: 0 }
+    );
+    observer.observe(hero);
+  } else {
+    pointerEnabled = true;
+  }
+
   window.addEventListener(
     "pointermove",
     (event) => {
-      x = event.clientX / Math.max(window.innerWidth, 1) - 0.5;
-      y = event.clientY / Math.max(window.innerHeight, 1) - 0.5;
-      if (!frame) frame = requestAnimationFrame(draw);
+      if (!pointerEnabled || pointerFrame) return;
+      pointerFrame = window.requestAnimationFrame(() => {
+        pointerFrame = 0;
+        const x = event.clientX / Math.max(window.innerWidth, 1) - 0.5;
+        const y = event.clientY / Math.max(window.innerHeight, 1) - 0.5;
+        heroArt.style.setProperty("--pointer-x", x.toFixed(3));
+        heroArt.style.setProperty("--pointer-y", y.toFixed(3));
+      });
     },
     { passive: true }
   );
 }
 
-requestAnimationFrame(() => {
-  document.querySelector(".hero-copy")?.classList.add("is-revealed");
-  window.setTimeout(() => document.querySelector(".hero-art")?.classList.add("is-revealed"), 130);
-});
+document.body.classList.add("atelier-motion");
+updateHeader();
+window.addEventListener("scroll", scheduleHeaderUpdate, { passive: true });
+revealEditorialElements();
+scheduleWizard();
+scheduleScrollStory();
+enablePointerDepth();
 
-Promise.allSettled([
-  import("./studio-wizard.js"),
-  import("./scroll-story.js")
-]).then((results) => {
-  const [wizardResult, scrollResult] = results;
-  if (wizardResult.status === "rejected") {
-    console.error("The guided creator could not load.", wizardResult.reason);
-    document.body.classList.remove("wizard-loading");
-  }
-  if (scrollResult.status === "rejected") {
-    console.error("The scroll-story design layer could not load.", scrollResult.reason);
-  }
+window.requestAnimationFrame(() => {
+  document.querySelector(".hero-copy")?.classList.add("is-revealed");
+  window.setTimeout(() => document.querySelector(".hero-art")?.classList.add("is-revealed"), 120);
 });
