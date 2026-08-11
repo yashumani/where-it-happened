@@ -1,0 +1,624 @@
+/*
+ * Scroll-led editorial storytelling.
+ * Inspired by the pacing of Framer's Grove/Journey templates, implemented
+ * without scroll hijacking so the map editor and commerce controls stay intact.
+ */
+
+.scroll-story-theme {
+  --scroll-ink: #07151f;
+  --scroll-paper: #f2ede2;
+  --scroll-coral: #d77f50;
+  --scroll-mist: #9fb3b8;
+  --scroll-progress: 0;
+}
+
+.scroll-story-theme .scroll-story-progress {
+  position: fixed;
+  z-index: 1000;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 3px;
+  pointer-events: none;
+  background: rgba(242, 237, 226, 0.08);
+}
+
+.scroll-story-theme .scroll-story-progress > span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: scaleX(0);
+  transform-origin: left center;
+  background: linear-gradient(90deg, var(--scroll-coral), #f2c49f);
+  will-change: transform;
+}
+
+.scroll-story-theme .hero {
+  --hero-scroll: 0;
+  min-height: 132svh;
+  align-items: start;
+}
+
+.scroll-story-theme .hero-copy,
+.scroll-story-theme .hero-art {
+  position: sticky;
+  top: clamp(108px, 15vh, 160px);
+}
+
+.scroll-story-theme .hero-copy {
+  transform:
+    translate3d(0, calc(var(--hero-scroll) * -40px), 0)
+    scale(calc(1 - var(--hero-scroll) * 0.035));
+  opacity: calc(1 - var(--hero-scroll) * 0.28);
+  transform-origin: left center;
+  will-change: transform, opacity;
+}
+
+.scroll-story-theme .hero-art {
+  transform:
+    translate3d(0, calc(var(--hero-scroll) * 72px), 0)
+    rotate(calc((var(--hero-scroll) - 0.5) * 1.6deg));
+  transform-origin: center center;
+  will-change: transform;
+}
+
+.scroll-story-theme .hero-art::before {
+  transform:
+    translate(-95%, -48%)
+    rotate(calc(-11deg + var(--hero-scroll) * 10deg))
+    translate3d(calc(var(--pointer-x) * -16px), calc(var(--pointer-y) * -10px), 0);
+}
+
+.scroll-story-theme .hero-art::after {
+  transform:
+    translate(7%, -52%)
+    rotate(calc(12deg - var(--hero-scroll) * 8deg))
+    translate3d(calc(var(--pointer-x) * 16px), calc(var(--pointer-y) * 11px), 0);
+}
+
+.scroll-story-theme .scroll-story-cue {
+  position: absolute;
+  z-index: 8;
+  bottom: 38px;
+  left: clamp(24px, 5vw, 80px);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  color: rgba(248, 244, 234, 0.48);
+  font-family: var(--atelier-mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.scroll-story-theme .scroll-story-cue span {
+  position: relative;
+  width: 54px;
+  height: 1px;
+  overflow: hidden;
+  background: rgba(248, 244, 234, 0.2);
+}
+
+.scroll-story-theme .scroll-story-cue span::after {
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: var(--scroll-coral);
+  content: "";
+  animation: scroll-cue-line 2.4s ease-in-out infinite;
+}
+
+@keyframes scroll-cue-line {
+  0%, 15% { transform: translateX(-100%); }
+  55%, 75% { transform: translateX(0); }
+  100% { transform: translateX(100%); }
+}
+
+/* Oversized manifesto */
+.scroll-story-theme .scroll-manifesto {
+  --manifesto-progress: 0;
+  position: relative;
+  display: grid;
+  min-height: 92svh;
+  place-content: center;
+  gap: 0;
+  padding: 12vh 0;
+  overflow: hidden;
+  border: 0;
+  background: var(--scroll-paper);
+  color: var(--scroll-ink);
+}
+
+.scroll-story-theme .scroll-manifesto::before,
+.scroll-story-theme .scroll-manifesto::after {
+  position: absolute;
+  width: 38vw;
+  aspect-ratio: 1;
+  border: 1px solid rgba(7, 21, 31, 0.09);
+  border-radius: 50%;
+  content: "";
+}
+
+.scroll-story-theme .scroll-manifesto::before {
+  top: -25vw;
+  left: -18vw;
+  transform: scale(calc(0.8 + var(--manifesto-progress) * 0.5));
+}
+
+.scroll-story-theme .scroll-manifesto::after {
+  right: -20vw;
+  bottom: -28vw;
+  transform: scale(calc(1.25 - var(--manifesto-progress) * 0.45));
+}
+
+.scroll-story-theme .scroll-manifesto p {
+  position: relative;
+  z-index: 2;
+  width: max-content;
+  margin: 0;
+  font-family: var(--atelier-display);
+  font-size: clamp(4.6rem, 15vw, 14rem);
+  font-weight: 400;
+  line-height: 0.72;
+  letter-spacing: -0.075em;
+  white-space: nowrap;
+}
+
+.scroll-story-theme .scroll-manifesto p:first-child {
+  transform: translate3d(calc((0.5 - var(--manifesto-progress)) * 28vw), 0, 0);
+}
+
+.scroll-story-theme .scroll-manifesto p:last-child {
+  transform: translate3d(calc((var(--manifesto-progress) - 0.5) * 24vw), 0, 0);
+  color: transparent;
+  font-style: italic;
+  -webkit-text-stroke: 1px rgba(7, 21, 31, 0.72);
+}
+
+/* Vertical scroll controlling a horizontal archive */
+.scroll-story-theme .scroll-archive {
+  --archive-progress: 0;
+  position: relative;
+  width: 100%;
+  max-width: none;
+  min-height: 360svh;
+  padding: 0;
+  overflow: clip;
+  background: #07151f;
+  color: var(--scroll-paper);
+}
+
+.scroll-story-theme .scroll-archive .section-heading {
+  position: sticky;
+  z-index: 8;
+  top: 78px;
+  width: min(calc(100% - clamp(32px, 8vw, 136px)), 1420px);
+  margin: 0 auto;
+  padding-top: clamp(38px, 7vh, 78px);
+  pointer-events: none;
+}
+
+.scroll-story-theme .scroll-archive .section-heading h2 {
+  max-width: 940px;
+  color: var(--scroll-paper);
+}
+
+.scroll-story-theme .scroll-archive .section-heading > p {
+  color: rgba(242, 237, 226, 0.52);
+}
+
+.scroll-story-theme .scroll-archive .example-grid {
+  --archive-x: 0px;
+  position: sticky;
+  top: 0;
+  display: flex;
+  width: max-content;
+  min-width: 100%;
+  height: 100svh;
+  align-items: flex-end;
+  gap: clamp(20px, 3vw, 44px);
+  padding:
+    clamp(230px, 32vh, 340px)
+    clamp(36px, 6.5vw, 110px)
+    clamp(40px, 8vh, 90px);
+  transform: translate3d(var(--archive-x), 0, 0);
+  will-change: transform;
+}
+
+.scroll-story-theme .scroll-archive .example-card {
+  position: relative;
+  flex: 0 0 clamp(290px, 36vw, 540px);
+  height: clamp(390px, 58vh, 650px);
+  margin: 0;
+  transform:
+    translate3d(0, calc((1 - var(--archive-progress)) * (var(--archive-index) - 2.5) * 9px), 0)
+    rotate(calc((var(--archive-index) - 2.5) * 0.75deg))
+    scale(0.94);
+  border: 1px solid rgba(242, 237, 226, 0.14);
+  border-radius: 0;
+  opacity: 0.52;
+  transition:
+    transform 360ms cubic-bezier(.2,.7,.2,1),
+    opacity 280ms ease,
+    filter 280ms ease;
+  filter: saturate(0.72);
+  scroll-snap-align: center;
+}
+
+.scroll-story-theme .scroll-archive .example-card::after {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  color: rgba(255, 255, 255, 0.44);
+  content: attr(data-archive-number);
+  font-family: var(--atelier-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+}
+
+.scroll-story-theme .scroll-archive .example-card.is-scroll-active,
+.scroll-story-theme .scroll-archive .example-card:hover,
+.scroll-story-theme .scroll-archive .example-card:focus-visible {
+  z-index: 2;
+  transform:
+    translate3d(0, -12px, 0)
+    rotate(0)
+    scale(1);
+  opacity: 1;
+  filter: saturate(1);
+}
+
+.scroll-story-theme .scroll-archive .example-card strong {
+  font-size: clamp(1.8rem, 3vw, 3.25rem);
+}
+
+/* Editions stack and overlap as the visitor scrolls */
+.scroll-story-theme .scroll-editions {
+  position: relative;
+  width: min(calc(100% - clamp(32px, 7vw, 120px)), 1420px);
+  min-height: 290svh;
+  padding-block: clamp(110px, 14vh, 180px);
+}
+
+.scroll-story-theme .scroll-editions .shop-heading {
+  position: sticky;
+  z-index: 2;
+  top: 105px;
+  max-width: 540px;
+  margin: 0;
+}
+
+.scroll-story-theme .scroll-editions .product-grid {
+  display: block;
+  width: min(760px, 58vw);
+  margin: -120px 0 0 auto;
+}
+
+.scroll-story-theme .scroll-editions .product-card {
+  --edition-progress: 0;
+  position: sticky;
+  top: calc(112px + var(--product-index) * 28px);
+  min-height: min(68vh, 680px);
+  margin-bottom: 34vh;
+  padding: clamp(32px, 5vw, 68px);
+  transform:
+    translate3d(0, calc((1 - var(--edition-progress)) * 44px), 0)
+    scale(calc(0.965 + var(--edition-progress) * 0.035));
+  border: 1px solid rgba(7, 21, 31, 0.14);
+  border-radius: 0;
+  box-shadow: 0 38px 90px rgba(7, 21, 31, 0.16);
+  will-change: transform;
+}
+
+.scroll-story-theme .scroll-editions .product-card::after {
+  position: absolute;
+  right: clamp(28px, 4vw, 54px);
+  bottom: clamp(26px, 4vw, 48px);
+  color: rgba(7, 21, 31, 0.22);
+  content: "EDITION " attr(data-edition-number);
+  font-family: var(--atelier-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.16em;
+}
+
+.scroll-story-theme .scroll-editions .product-card:nth-child(1) {
+  background: #f6f1e7;
+}
+
+.scroll-story-theme .scroll-editions .product-card:nth-child(2) {
+  background: #d8e0dc;
+}
+
+.scroll-story-theme .scroll-editions .product-card:nth-child(3) {
+  background: #d8a783;
+}
+
+.scroll-story-theme .scroll-editions .shop-assurance {
+  position: sticky;
+  bottom: 20px;
+  z-index: 5;
+  margin-top: -22vh;
+  backdrop-filter: blur(16px);
+}
+
+/* Scroll-driven process */
+.scroll-story-theme .scroll-process {
+  --process-progress: 0;
+  position: relative;
+  width: 100%;
+  max-width: none;
+  min-height: 285svh;
+  padding: 0 clamp(24px, 7vw, 112px);
+  background:
+    radial-gradient(circle at 80% 24%, rgba(215, 127, 80, 0.16), transparent 24%),
+    #0a1c27;
+  color: var(--scroll-paper);
+}
+
+.scroll-story-theme .scroll-process .section-heading {
+  position: sticky;
+  top: 112px;
+  width: min(100%, 660px);
+  margin: 0;
+  padding-top: clamp(90px, 13vh, 150px);
+  text-align: left;
+}
+
+.scroll-story-theme .scroll-process .section-heading h2 {
+  color: var(--scroll-paper);
+  font-size: clamp(3.1rem, 7vw, 7.2rem);
+  line-height: 0.88;
+}
+
+.scroll-story-theme .scroll-process .steps {
+  position: sticky;
+  top: 42vh;
+  display: grid;
+  width: min(650px, 48vw);
+  margin: 0 0 0 auto;
+  padding-bottom: 18vh;
+}
+
+.scroll-story-theme .scroll-process .steps > li {
+  grid-area: 1 / 1;
+  min-height: 220px;
+  padding: 28px 0;
+  transform: translate3d(0, 35px, 0);
+  border: 0;
+  border-top: 1px solid rgba(242, 237, 226, 0.16);
+  border-radius: 0;
+  background: transparent;
+  color: rgba(242, 237, 226, 0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms ease, transform 420ms cubic-bezier(.2,.7,.2,1), color 320ms ease;
+}
+
+.scroll-story-theme .scroll-process .steps > li.is-scroll-active {
+  transform: translate3d(0, 0, 0);
+  color: var(--scroll-paper);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.scroll-story-theme .scroll-process .steps > li.is-scroll-complete {
+  transform: translate3d(0, -30px, 0);
+  opacity: 0;
+}
+
+.scroll-story-theme .scroll-process .steps > li > span {
+  color: var(--scroll-coral);
+  font-family: var(--atelier-display);
+  font-size: clamp(4rem, 8vw, 7rem);
+  font-weight: 400;
+}
+
+.scroll-story-theme .scroll-process .steps h3 {
+  color: var(--scroll-paper);
+  font-size: clamp(1.8rem, 3.5vw, 3.7rem);
+}
+
+.scroll-story-theme .scroll-process .steps p {
+  color: rgba(242, 237, 226, 0.58);
+  font-size: 1rem;
+}
+
+/* Let the guided creator remain functional, but make its arrival cinematic */
+.scroll-story-theme .creator-section {
+  position: relative;
+  z-index: 3;
+  box-shadow: 0 -60px 120px rgba(0, 0, 0, 0.28);
+}
+
+.scroll-story-theme .creator-heading::before {
+  display: block;
+  margin-bottom: 28px;
+  color: rgba(242, 237, 226, 0.44);
+  content: "THE WORKING TABLE";
+  font-family: var(--atelier-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.18em;
+}
+
+/* Closing phrase reveals as a final full-screen plate */
+.scroll-story-theme .scroll-closing {
+  --closing-progress: 0;
+  min-height: 112svh;
+  place-content: center;
+  overflow: hidden;
+}
+
+.scroll-story-theme .scroll-closing h2 {
+  transform:
+    translate3d(0, calc((1 - var(--closing-progress)) * 80px), 0)
+    scale(calc(0.9 + var(--closing-progress) * 0.1));
+  opacity: calc(0.2 + var(--closing-progress) * 0.8);
+  clip-path: inset(calc((1 - var(--closing-progress)) * 45%) 0 0);
+  will-change: transform, opacity, clip-path;
+}
+
+.scroll-story-theme .scroll-closing::after {
+  position: absolute;
+  right: -8vw;
+  bottom: -12vw;
+  width: min(46vw, 650px);
+  aspect-ratio: 1;
+  transform: rotate(calc(var(--closing-progress) * 90deg));
+  border: 1px solid rgba(242, 237, 226, 0.13);
+  border-radius: 50%;
+  content: "";
+}
+
+@media (max-width: 980px) {
+  .scroll-story-theme .hero {
+    min-height: auto;
+  }
+
+  .scroll-story-theme .hero-copy,
+  .scroll-story-theme .hero-art {
+    position: relative;
+    top: auto;
+    transform: none;
+    opacity: 1;
+  }
+
+  .scroll-story-theme .scroll-story-cue {
+    display: none;
+  }
+
+  .scroll-story-theme .scroll-archive {
+    min-height: auto;
+    padding-block: 90px;
+  }
+
+  .scroll-story-theme .scroll-archive .section-heading {
+    position: relative;
+    top: auto;
+    padding-top: 0;
+    pointer-events: auto;
+  }
+
+  .scroll-story-theme .scroll-archive .example-grid {
+    position: relative;
+    top: auto;
+    height: auto;
+    margin-top: 44px;
+    padding: 0 clamp(20px, 5vw, 56px) 24px;
+    overflow-x: auto;
+    transform: none;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: thin;
+  }
+
+  .scroll-story-theme .scroll-archive .example-card {
+    flex-basis: min(78vw, 460px);
+    height: min(65vh, 580px);
+    transform: none;
+    opacity: 1;
+    filter: none;
+  }
+
+  .scroll-story-theme .scroll-editions {
+    min-height: auto;
+  }
+
+  .scroll-story-theme .scroll-editions .shop-heading {
+    position: relative;
+    top: auto;
+    max-width: none;
+  }
+
+  .scroll-story-theme .scroll-editions .product-grid {
+    display: grid;
+    width: 100%;
+    margin: 56px 0 0;
+  }
+
+  .scroll-story-theme .scroll-editions .product-card {
+    position: relative;
+    top: auto;
+    min-height: auto;
+    margin-bottom: 0;
+    transform: none;
+  }
+
+  .scroll-story-theme .scroll-editions .shop-assurance {
+    position: relative;
+    bottom: auto;
+    margin-top: 28px;
+  }
+
+  .scroll-story-theme .scroll-process {
+    min-height: auto;
+    padding-block: 100px;
+  }
+
+  .scroll-story-theme .scroll-process .section-heading,
+  .scroll-story-theme .scroll-process .steps {
+    position: relative;
+    top: auto;
+    width: 100%;
+  }
+
+  .scroll-story-theme .scroll-process .steps {
+    display: grid;
+    gap: 18px;
+    margin-top: 52px;
+  }
+
+  .scroll-story-theme .scroll-process .steps > li {
+    grid-area: auto;
+    min-height: auto;
+    transform: none;
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .scroll-story-theme .scroll-manifesto {
+    min-height: 64svh;
+  }
+
+  .scroll-story-theme .scroll-manifesto p {
+    font-size: clamp(4rem, 21vw, 7rem);
+  }
+
+  .scroll-story-theme .scroll-archive {
+    padding-block: 76px;
+  }
+
+  .scroll-story-theme .scroll-editions {
+    width: min(calc(100% - 28px), 1420px);
+    padding-block: 80px;
+  }
+
+  .scroll-story-theme .scroll-process {
+    padding-inline: 20px;
+  }
+
+  .scroll-story-theme .scroll-process .section-heading h2 {
+    font-size: clamp(3rem, 15vw, 5rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-story-theme .scroll-story-cue,
+  .scroll-story-theme .scroll-story-progress {
+    display: none;
+  }
+
+  .scroll-story-theme .hero-copy,
+  .scroll-story-theme .hero-art,
+  .scroll-story-theme .scroll-manifesto p,
+  .scroll-story-theme .scroll-archive .example-grid,
+  .scroll-story-theme .scroll-archive .example-card,
+  .scroll-story-theme .scroll-editions .product-card,
+  .scroll-story-theme .scroll-process .steps > li,
+  .scroll-story-theme .scroll-closing h2 {
+    transform: none !important;
+    animation: none !important;
+    opacity: 1 !important;
+    clip-path: none !important;
+  }
+}
