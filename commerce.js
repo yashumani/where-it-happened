@@ -1,8 +1,11 @@
 import { PRODUCT_LIST, STORE_CONFIG } from "./store-config.js";
 
-const CART_KEY = "where-it-happened.cart.v1";
-const CART_VERSION = 1;
-const MAX_CART_ITEMS = 8;
+const CART_KEY = "where-it-happened.cart.v2";
+const LEGACY_CART_KEY = "where-it-happened.cart.v1";
+const ORDER_DETAILS_KEY = "where-it-happened.order-details.v1";
+const SELECTED_PRODUCT_KEY = "where-it-happened.selected-product.v1";
+const CART_VERSION = 2;
+const MAX_CART_ITEMS = 12;
 
 const $ = (selector, scope = document) => scope.querySelector(selector);
 const $$ = (selector, scope = document) => [...scope.querySelectorAll(selector)];
@@ -14,6 +17,9 @@ export function initCommerce({
   showToast,
   scrollToCreator
 }) {
+  installStorefrontStyles();
+  injectStorefrontEnhancements();
+
   const elements = {
     cartOpen: $("#cartOpenButton"),
     cartCount: $("#cartCount"),
@@ -37,17 +43,32 @@ export function initCommerce({
     checkoutTotal: $("#checkoutTotal"),
     checkoutStatus: $("#checkoutStatus"),
     checkoutPrimary: $("#checkoutPrimaryButton"),
-    copyOrderBrief: $("#copyOrderBriefButton")
+    copyOrderBrief: $("#copyOrderBriefButton"),
+    orderName: $("#orderName"),
+    orderEmail: $("#orderEmail"),
+    orderGiftRecipient: $("#orderGiftRecipient"),
+    orderNote: $("#orderNote"),
+    orderTerms: $("#orderTerms"),
+    downloadCart: $("#downloadCartButton"),
+    restoreCartInput: $("#restoreCartInput"),
+    resumeBanner: $("#cartResumeBanner"),
+    resumeOpen: $("#cartResumeOpen"),
+    storeStatus: $("#storeStatusBanner"),
+    comparison: $("#productComparisonRows")
   };
 
   if (!elements.cartOpen || !elements.productSelect || !elements.addCurrentDesign) return;
 
-  let selectedProductId = "printPack";
+  let selectedProductId = loadSelectedProduct();
   let cart = loadCart();
+  let orderDetails = loadOrderDetails();
 
   populateProductSelect();
+  hydrateOrderDetails();
   bindEvents();
   selectProduct(selectedProductId, { announce: false, scroll: false });
+  renderProductComparison();
+  renderStoreStatus();
   renderCart();
 
   function populateProductSelect() {
@@ -61,16 +82,24 @@ export function initCommerce({
     elements.productSelect.value = selectedProductId;
   }
 
+  function hydrateOrderDetails() {
+    if (elements.orderName) elements.orderName.value = orderDetails.name;
+    if (elements.orderEmail) elements.orderEmail.value = orderDetails.email;
+    if (elements.orderGiftRecipient) elements.orderGiftRecipient.value = orderDetails.giftRecipient;
+    if (elements.orderNote) elements.orderNote.value = orderDetails.note;
+  }
+
   function bindEvents() {
     elements.cartOpen.addEventListener("click", openCart);
+    elements.resumeOpen?.addEventListener("click", openCart);
     elements.closingCart?.addEventListener("click", openCart);
     elements.cartReturnToCreator?.addEventListener("click", () => {
-      elements.cartDialog.close();
+      closeDialog(elements.cartDialog);
       scrollToCreator();
     });
-    elements.cartClose?.addEventListener("click", () => elements.cartDialog.close());
+    elements.cartClose?.addEventListener("click", () => closeDialog(elements.cartDialog));
     elements.cartDialog?.addEventListener("click", closeDialogFromBackdrop);
-    elements.checkoutClose?.addEventListener("click", () => elements.checkoutDialog.close());
+    elements.checkoutClose?.addEventListener("click", () => closeDialog(elements.checkoutDialog));
     elements.checkoutDialog?.addEventListener("click", closeDialogFromBackdrop);
 
     elements.productSelect.addEventListener("change", () => {
@@ -97,9 +126,16 @@ export function initCommerce({
         const item = cart.items.find((candidate) => candidate.id === editButton.dataset.editCartItem);
         if (!item) return;
         loadDesignState(item.design);
-        elements.cartDialog.close();
+        closeDialog(elements.cartDialog);
         scrollToCreator();
         showToast("Design loaded", "The cart version is back in the editor.");
+        return;
+      }
+
+      const openButton = event.target.closest("[data-open-design-link]");
+      if (openButton) {
+        const item = cart.items.find((candidate) => candidate.id === openButton.dataset.openDesignLink);
+        if (item?.designUrl) window.open(item.designUrl, "_blank", "noopener,noreferrer");
       }
     });
 
@@ -116,6 +152,7 @@ export function initCommerce({
 
     elements.cartClear.addEventListener("click", () => {
       if (!cart.items.length) return;
+      if (!window.confirm("Clear every saved design from this browser cart?")) return;
       cart.items = [];
       saveCart();
       renderCart();
@@ -125,25 +162,36 @@ export function initCommerce({
     elements.cartCheckout.addEventListener("click", openCheckout);
     elements.checkoutPrimary.addEventListener("click", handlePrimaryCheckout);
     elements.copyOrderBrief.addEventListener("click", copyOrderBrief);
+    elements.downloadCart?.addEventListener("click", downloadCartBackup);
+    elements.restoreCartInput?.addEventListener("change", restoreCartBackup);
+
+    [elements.orderName, elements.orderEmail, elements.orderGiftRecipient, elements.orderNote]
+      .filter(Boolean)
+      .forEach((field) => field.addEventListener("input", saveOrderDetailsFromForm));
+
+    elements.orderTerms?.addEventListener("change", updateCheckoutButtonState);
   }
 
   function closeDialogFromBackdrop(event) {
-    if (event.target === event.currentTarget) event.currentTarget.close();
+    if (event.target === event.currentTarget) closeDialog(event.currentTarget);
   }
 
   function selectProduct(productId, { announce = false, scroll = false } = {}) {
-    const product = getProduct(productId);
+    const product = getProduct(productId) || PRODUCT_LIST[0];
     if (!product) return;
     selectedProductId = product.id;
+    saveSelectedProduct(product.id);
     elements.productSelect.value = product.id;
     elements.selectedName.textContent = product.name;
     elements.selectedPrice.textContent = formatMoney(product.price);
-    elements.selectedDelivery.textContent = product.delivery;
+    elements.selectedDelivery.textContent = `${product.delivery} · ${product.turnaround}`;
 
     $$('[data-select-product]').forEach((button) => {
       const selected = button.dataset.selectProduct === product.id;
       button.classList.toggle("is-selected", selected);
       button.setAttribute("aria-pressed", String(selected));
+      if (selected) button.textContent = `${product.shortName} selected`;
+      else button.textContent = `Choose ${product.shortName}`;
     });
 
     if (scroll) scrollToCreator();
@@ -195,8 +243,7 @@ export function initCommerce({
 
   function openCart() {
     renderCart();
-    if (elements.cartDialog.showModal) elements.cartDialog.showModal();
-    else elements.cartDialog.setAttribute("open", "");
+    openDialog(elements.cartDialog);
   }
 
   function renderCart() {
@@ -216,6 +263,8 @@ export function initCommerce({
     elements.cartSubtotal.textContent = formatMoney(total);
     elements.cartCheckout.disabled = cart.items.length === 0;
     elements.cartClear.disabled = cart.items.length === 0;
+    if (elements.downloadCart) elements.downloadCart.disabled = cart.items.length === 0;
+    renderResumeBanner();
   }
 
   function createCartItemElement(item) {
@@ -245,7 +294,7 @@ export function initCommerce({
     const title = document.createElement("strong");
     title.textContent = item.design.title || "Personalized memory map";
     const place = document.createElement("small");
-    place.textContent = `${item.design.city || "Custom place"} · ${item.design.format || "portrait"}`;
+    place.textContent = `${item.design.city || "Custom place"} · ${formatLabel(item.design.format)} · ${capitalize(item.design.theme)}`;
     heading.append(title, place);
     const price = document.createElement("strong");
     price.className = "cart-item-price";
@@ -267,19 +316,27 @@ export function initCommerce({
     });
     label.append(labelText, select);
 
+    const metadata = document.createElement("div");
+    metadata.className = "cart-item-metadata";
+    metadata.innerHTML = `<span>${escapeHtml(product.delivery)}</span><span>${escapeHtml(product.turnaround)}</span>`;
+
     const actions = document.createElement("div");
     actions.className = "cart-item-actions";
     const edit = document.createElement("button");
     edit.type = "button";
     edit.dataset.editCartItem = item.id;
     edit.textContent = "Edit design";
+    const open = document.createElement("button");
+    open.type = "button";
+    open.dataset.openDesignLink = item.id;
+    open.textContent = "Open saved link";
     const remove = document.createElement("button");
     remove.type = "button";
     remove.dataset.removeCartItem = item.id;
     remove.textContent = "Remove";
-    actions.append(edit, remove);
+    actions.append(edit, open, remove);
 
-    content.append(headingRow, label, actions);
+    content.append(headingRow, label, metadata, actions);
     article.append(mini, content);
     return article;
   }
@@ -287,9 +344,8 @@ export function initCommerce({
   function openCheckout() {
     if (!cart.items.length) return;
     renderCheckout();
-    elements.cartDialog.close();
-    if (elements.checkoutDialog.showModal) elements.checkoutDialog.showModal();
-    else elements.checkoutDialog.setAttribute("open", "");
+    closeDialog(elements.cartDialog);
+    openDialog(elements.checkoutDialog);
   }
 
   function renderCheckout() {
@@ -312,40 +368,73 @@ export function initCommerce({
 
     elements.checkoutTotal.textContent = formatMoney(cartTotal());
     const readiness = getCheckoutReadiness();
+    elements.checkoutStatus.classList.toggle("is-pending", readiness.mode !== "hosted");
+    elements.checkoutStatus.classList.toggle("is-ready", readiness.mode === "hosted");
+    elements.checkoutStatus.innerHTML = `<strong>${escapeHtml(readiness.heading)}</strong><span>${escapeHtml(readiness.detail)}</span>`;
 
-    if (readiness.ready) {
-      elements.checkoutStatus.classList.remove("is-pending");
-      elements.checkoutStatus.innerHTML = `<strong>Secure checkout ready</strong><span>Your order brief will be copied, then you will continue to ${escapeHtml(STORE_CONFIG.checkoutProvider)} to pay.</span>`;
-      elements.checkoutPrimary.disabled = false;
+    if (readiness.mode === "hosted") {
       elements.checkoutPrimary.textContent = `Copy brief & continue to ${STORE_CONFIG.checkoutProvider}`;
+    } else if (readiness.mode === "request") {
+      elements.checkoutPrimary.textContent = "Download order request";
     } else {
-      elements.checkoutStatus.classList.add("is-pending");
-      elements.checkoutStatus.innerHTML = `<strong>${escapeHtml(readiness.heading)}</strong><span>${escapeHtml(readiness.detail)}</span>`;
-      elements.checkoutPrimary.disabled = true;
-      elements.checkoutPrimary.textContent = "Secure checkout coming next";
+      elements.checkoutPrimary.textContent = "Checkout unavailable";
     }
+
+    updateCheckoutButtonState();
+  }
+
+  function updateCheckoutButtonState() {
+    const readiness = getCheckoutReadiness();
+    const consentRequired = readiness.mode === "hosted";
+    const consentGiven = Boolean(elements.orderTerms?.checked);
+    elements.checkoutPrimary.disabled = !readiness.ready || (consentRequired && !consentGiven);
   }
 
   async function handlePrimaryCheckout() {
     const readiness = getCheckoutReadiness();
     if (!readiness.ready) return;
 
+    if (readiness.mode === "request") {
+      const orderId = createOrderId();
+      downloadText(buildOrderBrief(orderId, { paymentStatus: "NOT COLLECTED — ORDER REQUEST ONLY" }), `${orderId.toLowerCase()}-order-request.txt`);
+      showToast("Order request saved", "No payment was collected. Keep the file until hosted checkout is connected.");
+      return;
+    }
+
+    if (!elements.orderTerms?.checked) {
+      elements.orderTerms?.focus();
+      showToast("Agreement needed", "Review and accept the store terms before continuing.", true);
+      return;
+    }
+
+    if (orderDetails.email && !isValidEmail(orderDetails.email)) {
+      elements.orderEmail?.focus();
+      showToast("Check the email address", "Use a valid email or leave the optional field empty.", true);
+      return;
+    }
+
     const orderId = createOrderId();
     const checkoutUrl = buildHostedCheckoutUrl(orderId);
     if (!checkoutUrl) return;
 
     try {
-      await copyText(buildOrderBrief(orderId));
+      await copyText(buildOrderBrief(orderId, { paymentStatus: "CONTINUING TO HOSTED CHECKOUT" }));
       showToast("Order brief copied", "Paste it into the required Design details field at checkout.");
     } catch (error) {
       console.warn("Could not copy the order brief before checkout.", error);
-      showToast("Checkout opening", "Copy your design links from the cart if the checkout asks for them.", true);
+      showToast("Checkout opening", "Copy your design links from the cart if checkout asks for them.", true);
     }
 
     try {
       window.localStorage.setItem(
-        "where-it-happened.pending-order.v1",
-        JSON.stringify({ orderId, createdAt: new Date().toISOString(), items: cart.items })
+        "where-it-happened.pending-order.v2",
+        JSON.stringify({
+          orderId,
+          createdAt: new Date().toISOString(),
+          items: cart.items,
+          orderDetails,
+          policyVersion: STORE_CONFIG.policyVersion
+        })
       );
     } catch (error) {
       console.warn("Could not save the pending order.", error);
@@ -361,39 +450,62 @@ export function initCommerce({
       showToast("Order brief copied", "It includes every product and restorable design link.");
     } catch (error) {
       console.error("Could not copy order brief.", error);
-      showToast("Copy failed", "Select and copy the design links from the cart instead.", true);
+      downloadText(brief, "where-it-happened-order-brief.txt");
+      showToast("Order brief downloaded", "Clipboard access was unavailable, so a text file was saved instead.");
     }
   }
 
-  function buildOrderBrief(orderId = createOrderId()) {
+  function buildOrderBrief(orderId = createOrderId(), { paymentStatus = "NOT YET PAID" } = {}) {
     const lines = [
       "WHERE IT HAPPENED — ORDER BRIEF",
-      `Order: ${orderId}`,
+      `Order reference: ${orderId}`,
       `Created: ${new Date().toLocaleString()}`,
+      `Payment status: ${paymentStatus}`,
+      `Policy version: ${STORE_CONFIG.policyVersion}`,
       ""
     ];
+
+    if (orderDetails.name) lines.push(`Customer name: ${orderDetails.name}`);
+    if (orderDetails.email) lines.push(`Contact email: ${orderDetails.email}`);
+    if (orderDetails.giftRecipient) lines.push(`Gift recipient: ${orderDetails.giftRecipient}`);
+    if (orderDetails.note) lines.push(`Order note: ${orderDetails.note}`);
+    if (orderDetails.name || orderDetails.email || orderDetails.giftRecipient || orderDetails.note) lines.push("");
+
     cart.items.forEach((item, index) => {
       const product = getProduct(item.productId);
       lines.push(
         `${index + 1}. ${product?.name || "Memory map"} — ${formatMoney(product?.price || 0)}`,
         `   Title: ${item.design.title || "Personalized memory map"}`,
-        `   Place: ${item.design.city || "Custom place"}`,
-        `   Format: ${item.design.format || "portrait"}`,
+        `   Place: ${item.design.city || "Custom place"}${item.design.country ? `, ${item.design.country}` : ""}`,
+        `   Coordinates: ${item.design.lat.toFixed(5)}, ${item.design.lng.toFixed(5)}`,
+        `   Format: ${formatLabel(item.design.format)}`,
+        `   Theme: ${capitalize(item.design.theme)}`,
+        `   Layout: ${capitalize(item.design.layout)}`,
+        `   Date line: ${item.design.date || "Not supplied"}`,
+        `   Delivery: ${product?.delivery || "Digital files"}`,
         `   Design link: ${item.designUrl}`,
         ""
       );
     });
-    lines.push(`TOTAL: ${formatMoney(cartTotal())}`);
+
+    lines.push(
+      `TOTAL: ${formatMoney(cartTotal())}`,
+      `Estimated delivery: ${STORE_CONFIG.standardDeliveryWindow}`,
+      `Privacy: ${absolutePolicyUrl(STORE_CONFIG.policies.privacy)}`,
+      `Terms: ${absolutePolicyUrl(STORE_CONFIG.policies.terms)}`,
+      `Refunds: ${absolutePolicyUrl(STORE_CONFIG.policies.refunds)}`,
+      `Delivery: ${absolutePolicyUrl(STORE_CONFIG.policies.delivery)}`
+    );
     return lines.join("\n");
   }
-
 
   function getCheckoutReadiness() {
     if (!cart.items.length) {
       return {
         ready: false,
+        mode: "blocked",
         heading: "Your cart is empty",
-        detail: "Add a finished design before continuing to checkout."
+        detail: "Add a finished design before continuing."
       };
     }
 
@@ -401,9 +513,12 @@ export function initCommerce({
     const missingLinks = products.some((product) => !product?.checkoutUrl);
     if (missingLinks) {
       return {
-        ready: false,
-        heading: "Payment connection is being finalized",
-        detail: "Your cart and exact design links are saved. Public hosted checkout links are the only remaining store configuration."
+        ready: Boolean(STORE_CONFIG.orderRequestEnabled),
+        mode: STORE_CONFIG.orderRequestEnabled ? "request" : "blocked",
+        heading: "Secure payment is not connected yet",
+        detail: STORE_CONFIG.orderRequestEnabled
+          ? "You can download a complete order request now. No payment will be collected."
+          : "Your cart and exact design links remain saved in this browser."
       };
     }
 
@@ -412,6 +527,7 @@ export function initCommerce({
       if (keys.some((key) => !key)) {
         return {
           ready: false,
+          mode: "blocked",
           heading: "A Payhip link needs attention",
           detail: "Use a Payhip product page or direct checkout URL for every product in store-config.js."
         };
@@ -420,19 +536,26 @@ export function initCommerce({
       if (new Set(keys).size !== keys.length) {
         return {
           ready: false,
+          mode: "blocked",
           heading: "Split duplicate product designs into separate orders",
-          detail: "Payhip can combine different products, but repeated personalized copies of the same product need separate checkouts in this MVP."
+          detail: "Payhip can combine different products, but repeated personalized copies of one product need separate checkouts in this MVP."
         };
       }
     } else if (cart.items.length > 1) {
       return {
         ready: false,
+        mode: "blocked",
         heading: "This checkout provider supports one custom design at a time",
-        detail: "Remove the other cart items, complete the first purchase, then return for the next design."
+        detail: "Purchase one design, then return for the next."
       };
     }
 
-    return { ready: true, heading: "Secure checkout ready", detail: "" };
+    return {
+      ready: true,
+      mode: "hosted",
+      heading: "Secure hosted checkout is ready",
+      detail: `Your order brief will be copied before you continue to ${STORE_CONFIG.checkoutProvider}.`
+    };
   }
 
   function buildHostedCheckoutUrl(orderId) {
@@ -459,26 +582,172 @@ export function initCommerce({
   }
 
   function saveCart() {
+    cart.version = CART_VERSION;
+    cart.updatedAt = new Date().toISOString();
     try {
       window.localStorage.setItem(CART_KEY, JSON.stringify(cart));
+      window.localStorage.removeItem(LEGACY_CART_KEY);
     } catch (error) {
       console.warn("Could not save the cart.", error);
     }
   }
 
   function loadCart() {
+    const candidates = [CART_KEY, LEGACY_CART_KEY];
+    for (const key of candidates) {
+      try {
+        const raw = JSON.parse(window.localStorage.getItem(key));
+        if (!raw || !Array.isArray(raw.items)) continue;
+        return {
+          version: CART_VERSION,
+          updatedAt: raw.updatedAt || new Date().toISOString(),
+          items: raw.items
+            .filter((item) => item && getProduct(item.productId) && item.design && typeof item.designUrl === "string")
+            .map((item) => ({
+              ...item,
+              id: String(item.id || createId()),
+              design: sanitizeDesignSnapshot(item.design),
+              designUrl: String(item.designUrl)
+            }))
+            .slice(-MAX_CART_ITEMS)
+        };
+      } catch {
+        // Try the next storage key.
+      }
+    }
+    return { version: CART_VERSION, updatedAt: new Date().toISOString(), items: [] };
+  }
+
+  function saveOrderDetailsFromForm() {
+    orderDetails = {
+      name: String(elements.orderName?.value || "").trim().slice(0, 80),
+      email: String(elements.orderEmail?.value || "").trim().slice(0, 120),
+      giftRecipient: String(elements.orderGiftRecipient?.value || "").trim().slice(0, 80),
+      note: String(elements.orderNote?.value || "").trim().slice(0, 500)
+    };
     try {
-      const raw = JSON.parse(window.localStorage.getItem(CART_KEY));
-      if (raw?.version !== CART_VERSION || !Array.isArray(raw.items)) throw new Error("Unknown cart version");
+      window.localStorage.setItem(ORDER_DETAILS_KEY, JSON.stringify(orderDetails));
+    } catch (error) {
+      console.warn("Could not save order details.", error);
+    }
+  }
+
+  function loadOrderDetails() {
+    try {
+      const raw = JSON.parse(window.localStorage.getItem(ORDER_DETAILS_KEY));
       return {
-        version: CART_VERSION,
-        items: raw.items
-          .filter((item) => item && getProduct(item.productId) && item.design && typeof item.designUrl === "string")
-          .slice(-MAX_CART_ITEMS)
+        name: String(raw?.name || "").slice(0, 80),
+        email: String(raw?.email || "").slice(0, 120),
+        giftRecipient: String(raw?.giftRecipient || "").slice(0, 80),
+        note: String(raw?.note || "").slice(0, 500)
       };
     } catch {
-      return { version: CART_VERSION, items: [] };
+      return { name: "", email: "", giftRecipient: "", note: "" };
     }
+  }
+
+  function downloadCartBackup() {
+    if (!cart.items.length) return;
+    const payload = {
+      app: "where-it-happened",
+      version: CART_VERSION,
+      exportedAt: new Date().toISOString(),
+      cart,
+      orderDetails
+    };
+    downloadText(JSON.stringify(payload, null, 2), `where-it-happened-cart-${new Date().toISOString().slice(0, 10)}.json`, "application/json");
+    showToast("Cart backup downloaded", "Keep the JSON file private; it contains your design links and order notes.");
+  }
+
+  async function restoreCartBackup(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    try {
+      const payload = JSON.parse(await file.text());
+      if (payload?.app !== "where-it-happened" || !Array.isArray(payload?.cart?.items)) {
+        throw new Error("Unknown backup format");
+      }
+      const restoredItems = payload.cart.items
+        .filter((item) => item && getProduct(item.productId) && item.design && typeof item.designUrl === "string")
+        .map((item) => ({
+          ...item,
+          id: String(item.id || createId()),
+          design: sanitizeDesignSnapshot(item.design),
+          designUrl: String(item.designUrl)
+        }))
+        .slice(-MAX_CART_ITEMS);
+
+      if (!restoredItems.length) throw new Error("The backup contains no usable designs");
+      if (cart.items.length && !window.confirm("Replace the current browser cart with this backup?")) return;
+
+      cart = { version: CART_VERSION, updatedAt: new Date().toISOString(), items: restoredItems };
+      if (payload.orderDetails) {
+        orderDetails = {
+          name: String(payload.orderDetails.name || "").slice(0, 80),
+          email: String(payload.orderDetails.email || "").slice(0, 120),
+          giftRecipient: String(payload.orderDetails.giftRecipient || "").slice(0, 80),
+          note: String(payload.orderDetails.note || "").slice(0, 500)
+        };
+        hydrateOrderDetails();
+        saveOrderDetailsFromForm();
+      }
+      saveCart();
+      renderCart();
+      showToast("Cart restored", `${restoredItems.length} design${restoredItems.length === 1 ? "" : "s"} loaded from the backup.`);
+    } catch (error) {
+      console.error("Cart restore failed.", error);
+      showToast("Backup could not be restored", "Choose a cart JSON file exported by this website.", true);
+    }
+  }
+
+  function renderResumeBanner() {
+    if (!elements.resumeBanner) return;
+    elements.resumeBanner.hidden = cart.items.length === 0;
+    const count = $("[data-resume-count]", elements.resumeBanner);
+    const total = $("[data-resume-total]", elements.resumeBanner);
+    if (count) count.textContent = `${cart.items.length} saved design${cart.items.length === 1 ? "" : "s"}`;
+    if (total) total.textContent = formatMoney(cartTotal());
+  }
+
+  function renderStoreStatus() {
+    if (!elements.storeStatus) return;
+    const configured = PRODUCT_LIST.filter((product) => Boolean(product.checkoutUrl)).length;
+    const allConfigured = configured === PRODUCT_LIST.length;
+    const icon = $("[data-store-status-icon]", elements.storeStatus);
+    const heading = $("[data-store-status-heading]", elements.storeStatus);
+    const detail = $("[data-store-status-detail]", elements.storeStatus);
+
+    elements.storeStatus.classList.toggle("is-live", allConfigured);
+    if (icon) icon.textContent = allConfigured ? "✓" : "○";
+    if (heading) heading.textContent = allConfigured ? "Secure checkout connected" : "Public preview storefront";
+    if (detail) {
+      detail.textContent = allConfigured
+        ? `All products continue to ${STORE_CONFIG.checkoutProvider} for payment.`
+        : "Design, search, products, and cart are live. Payment remains disabled until seller-owned checkout links are added.";
+    }
+  }
+
+  function renderProductComparison() {
+    if (!elements.comparison) return;
+    elements.comparison.replaceChildren();
+    PRODUCT_LIST.forEach((product) => {
+      const article = document.createElement("article");
+      article.className = "comparison-product";
+      article.innerHTML = `
+        <div><span>${escapeHtml(product.badge)}</span><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(product.bestFor)}</small></div>
+        <p><strong>${formatMoney(product.price)}</strong><span>one time</span></p>
+        <ul>${product.features.map((feature) => `<li>${escapeHtml(feature)}</li>`).join("")}</ul>
+        <div class="comparison-product-meta"><span>${escapeHtml(product.delivery)}</span><span>${escapeHtml(product.turnaround)}</span></div>
+        <button type="button" class="button button-outline button-full" data-comparison-select="${escapeHtml(product.id)}">Choose ${escapeHtml(product.shortName)}</button>
+      `;
+      elements.comparison.append(article);
+    });
+
+    $$('[data-comparison-select]', elements.comparison).forEach((button) => {
+      button.addEventListener("click", () => selectProduct(button.dataset.comparisonSelect, { announce: true, scroll: true }));
+    });
   }
 
   function getProduct(productId) {
@@ -491,6 +760,125 @@ export function initCommerce({
       currency: STORE_CONFIG.currency,
       maximumFractionDigits: 0
     }).format(value);
+  }
+}
+
+function installStorefrontStyles() {
+  if (document.querySelector('link[data-storefront-v2]')) return;
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = new URL("./storefront-v2.css", import.meta.url).href;
+  link.dataset.storefrontV2 = "";
+  document.head.append(link);
+}
+
+function injectStorefrontEnhancements() {
+  if (!$("#cartResumeBanner")) {
+    const header = $(".site-header");
+    header?.insertAdjacentHTML(
+      "afterend",
+      `<aside class="cart-resume-banner" id="cartResumeBanner" hidden aria-label="Saved cart reminder">
+        <div><strong data-resume-count>Saved designs</strong><span data-resume-total>$0</span></div>
+        <p>Your cart is stored in this browser.</p>
+        <button type="button" id="cartResumeOpen">Resume cart</button>
+      </aside>`
+    );
+  }
+
+  if (!$("#storeStatusBanner")) {
+    const productGrid = $("#shop .product-grid");
+    productGrid?.insertAdjacentHTML(
+      "beforebegin",
+      `<div class="store-status-banner" id="storeStatusBanner" role="status">
+        <span data-store-status-icon aria-hidden="true">○</span>
+        <div><strong data-store-status-heading>Public preview storefront</strong><p data-store-status-detail>Checking checkout status…</p></div>
+      </div>`
+    );
+    productGrid?.insertAdjacentHTML(
+      "afterend",
+      `<section class="product-comparison" aria-labelledby="product-comparison-title">
+        <div class="product-comparison-heading">
+          <p class="eyebrow"><span></span> Compare the finished files</p>
+          <h3 id="product-comparison-title">Choose by how you plan to keep the memory.</h3>
+          <p>Every product begins with the exact design in your browser. The difference is the file set and level of preparation.</p>
+        </div>
+        <div class="product-comparison-rows" id="productComparisonRows"></div>
+      </section>`
+    );
+  }
+
+  if (!$("#buyingConfidence")) {
+    const closing = $(".closing");
+    closing?.insertAdjacentHTML(
+      "beforebegin",
+      `<section class="buying-confidence section-shell" id="buyingConfidence" aria-labelledby="buying-confidence-title">
+        <div class="section-heading split-heading">
+          <div><p class="eyebrow"><span></span> Before you order</p><h2 id="buying-confidence-title">A clear handoff from your design to the finished files.</h2></div>
+          <p>The current MVP keeps the creative work in your browser and uses a hosted checkout only after payment links are connected.</p>
+        </div>
+        <div class="confidence-grid">
+          <article><span>01</span><h3>Design preserved</h3><p>The cart stores your exact coordinates, wording, theme, layout, format, and restorable link.</p></article>
+          <article><span>02</span><h3>Hosted payment</h3><p>No card details are entered on this website. Payment will happen with the connected checkout provider.</p></article>
+          <article><span>03</span><h3>Human quality check</h3><p>Personalized paid files are reviewed against the saved design before delivery.</p></article>
+          <article><span>04</span><h3>Digital delivery</h3><p>Products are digital-only in this cycle. The standard target is 2–3 business days.</p></article>
+        </div>
+        <div class="delivery-steps">
+          <p class="eyebrow"><span></span> What happens next</p>
+          <ol>
+            <li><strong>1</strong><div><h3>Create and review</h3><p>Finish the map and check every line of text.</p></div></li>
+            <li><strong>2</strong><div><h3>Add the exact design</h3><p>Choose a product and save that version to the browser cart.</p></div></li>
+            <li><strong>3</strong><div><h3>Pay or save a request</h3><p>Use hosted checkout when connected, or download a complete order request during the preview.</p></div></li>
+            <li><strong>4</strong><div><h3>Receive the files</h3><p>The final watermark-free files are prepared and delivered digitally.</p></div></li>
+          </ol>
+        </div>
+        <div class="store-faq" aria-labelledby="store-faq-title">
+          <div><p class="eyebrow"><span></span> Questions before buying</p><h3 id="store-faq-title">The practical details.</h3></div>
+          <div>
+            <details><summary>Is this a physical poster?</summary><p>No. The current products are digital file packages. Physical printing and shipping are not included yet.</p></details>
+            <details><summary>Can I edit a design after adding it to the cart?</summary><p>Yes. Open the cart, choose “Edit design,” make the changes, and add the updated version again.</p></details>
+            <details><summary>Are the free downloads usable?</summary><p>Yes, for evaluation and sharing. Free PNG and print previews include a visible preview watermark.</p></details>
+            <details><summary>When will paid files arrive?</summary><p>The working delivery target is 2–3 business days after payment and complete design details are received.</p></details>
+            <details><summary>What happens if checkout is not connected?</summary><p>You can still save the cart, copy the complete order brief, or download an order request. No payment is collected in that mode.</p></details>
+          </div>
+        </div>
+      </section>`
+    );
+  }
+
+  if (!$("#checkoutCustomerDetails")) {
+    const checkoutStatus = $("#checkoutStatus");
+    checkoutStatus?.insertAdjacentHTML(
+      "beforebegin",
+      `<section class="checkout-customer-details" id="checkoutCustomerDetails" aria-labelledby="checkout-details-title">
+        <div><h3 id="checkout-details-title">Order details</h3><p>These fields stay in this browser and are included only in the copied order brief.</p></div>
+        <div class="checkout-fields">
+          <label><span>Name <small>optional</small></span><input id="orderName" autocomplete="name" maxlength="80" placeholder="Your name" /></label>
+          <label><span>Email <small>optional here</small></span><input id="orderEmail" type="email" autocomplete="email" maxlength="120" placeholder="you@example.com" /></label>
+          <label><span>Gift recipient <small>optional</small></span><input id="orderGiftRecipient" maxlength="80" placeholder="Who is this for?" /></label>
+          <label class="checkout-note-field"><span>Notes <small>optional</small></span><textarea id="orderNote" maxlength="500" rows="3" placeholder="Delivery date, caption preference, or anything to review"></textarea></label>
+        </div>
+        <label class="checkout-consent"><input id="orderTerms" type="checkbox" /><span>I have reviewed the design and agree to the <a href="./terms.html" target="_blank" rel="noopener">terms</a>, <a href="./delivery.html" target="_blank" rel="noopener">delivery policy</a>, and <a href="./refunds.html" target="_blank" rel="noopener">refund policy</a>.</span></label>
+      </section>`
+    );
+  }
+
+  if (!$("#downloadCartButton")) {
+    const clearButton = $("#cartClearButton");
+    clearButton?.insertAdjacentHTML(
+      "beforebegin",
+      `<div class="cart-portability">
+        <button class="button button-outline" id="downloadCartButton" type="button" disabled>Save cart backup</button>
+        <label class="button button-outline" for="restoreCartInput">Restore backup<input id="restoreCartInput" type="file" accept="application/json,.json" hidden /></label>
+      </div>`
+    );
+  }
+
+  const footerLinks = $(".footer-links");
+  if (footerLinks && !footerLinks.querySelector('[href="./privacy.html"]')) {
+    footerLinks.insertAdjacentHTML(
+      "beforeend",
+      `<a href="./privacy.html">Privacy</a><a href="./terms.html">Terms</a><a href="./refunds.html">Refunds</a><a href="./delivery.html">Delivery</a>`
+    );
   }
 }
 
@@ -541,6 +929,35 @@ function designFingerprint(design) {
   ]);
 }
 
+function loadSelectedProduct() {
+  try {
+    const saved = window.localStorage.getItem(SELECTED_PRODUCT_KEY);
+    return STORE_CONFIG.products[saved] ? saved : "printPack";
+  } catch {
+    return "printPack";
+  }
+}
+
+function saveSelectedProduct(productId) {
+  try {
+    window.localStorage.setItem(SELECTED_PRODUCT_KEY, productId);
+  } catch {
+    // Product selection can remain session-only when storage is unavailable.
+  }
+}
+
+function openDialog(dialog) {
+  if (!dialog || dialog.open) return;
+  if (typeof dialog.showModal === "function") dialog.showModal();
+  else dialog.setAttribute("open", "");
+}
+
+function closeDialog(dialog) {
+  if (!dialog || !dialog.open) return;
+  if (typeof dialog.close === "function") dialog.close();
+  else dialog.removeAttribute("open");
+}
+
 function createId() {
   return window.crypto?.randomUUID?.() || `cart-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
@@ -552,6 +969,15 @@ function finiteNumber(value, fallback) {
 
 function safeTheme(value) {
   return ["paper", "editorial", "heritage", "midnight", "fjord"].includes(value) ? value : "paper";
+}
+
+function formatLabel(value) {
+  return { portrait: "Portrait", square: "Square", wallpaper: "Phone wallpaper" }[value] || capitalize(value);
+}
+
+function capitalize(value) {
+  const text = String(value || "");
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : "";
 }
 
 function escapeHtml(value) {
@@ -584,6 +1010,18 @@ function createOrderId() {
   return `WIH-${stamp}-${random}`;
 }
 
+function absolutePolicyUrl(value) {
+  try {
+    return new URL(value, window.location.href).toString();
+  } catch {
+    return value;
+  }
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value));
+}
+
 async function copyText(text) {
   if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(text);
   const textarea = document.createElement("textarea");
@@ -596,4 +1034,16 @@ async function copyText(text) {
   const copied = document.execCommand("copy");
   textarea.remove();
   if (!copied) throw new Error("Copy command failed");
+}
+
+function downloadText(text, filename, type = "text/plain") {
+  const blob = new Blob([text], { type: `${type};charset=utf-8` });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 3000);
 }
