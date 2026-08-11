@@ -9,7 +9,8 @@ const sources = [
   "atelier-4.css",
   "studio-wizard.css",
   "scroll-story.css",
-  "site-polish.css"
+  "site-polish.css",
+  "atlas-v3.css"
 ];
 
 const sections = await Promise.all(

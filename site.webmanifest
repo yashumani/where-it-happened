@@ -1,11 +1,11 @@
 {
-  "name": "Where It Happened \u2014 Cartographic Memory Atelier",
+  "name": "Where It Happened \u2014 Personal Map Objects",
   "short_name": "Where It Happened",
-  "description": "Turn a meaningful place into a personal map artwork, then preview, share, or save the exact design to your cart.",
+  "description": "Turn any meaningful city, street, or landmark into a personal map object.",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#071722",
-  "theme_color": "#071722",
+  "background_color": "#f2efe7",
+  "theme_color": "#f2efe7",
   "icons": [
     {
       "src": "./assets/favicon.svg",

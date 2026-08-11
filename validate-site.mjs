@@ -75,7 +75,7 @@ for (const file of htmlFiles) {
   report(duplicateIds.length === 0, `${file} contains duplicate IDs: ${duplicateIds.join(", ")}`);
 
   if (file !== "404.html") {
-    report(html.includes('href="./site.css"'), `${file} does not load the production stylesheet`);
+    report(html.includes('href="./site.css'), `${file} does not load the production stylesheet`);
   }
 
   for (const match of html.matchAll(/\b(?:href|src)=["'](\.\/[^"'#?]+)(?:[?#][^"']*)?["']/g)) {
@@ -94,8 +94,8 @@ report(!/maplibre/i.test(head), "MapLibre is loaded eagerly in index.html instea
 const atelierSource = await readFile("atelier.js", "utf8");
 report(atelierSource.includes('import("./studio-wizard.js")'), "The guided studio is no longer deferred");
 report(atelierSource.includes('import("./scroll-story.js")'), "Scroll storytelling is no longer deferred");
-report(index.includes('<link rel="stylesheet" href="./site.css"'), "index.html does not use the CSS bundle");
-report(index.includes('<h1 id="hero-title"><span>Some places</span><em>become part of us.</em></h1>'), "The semantic hero headline is missing");
+report(index.includes('<link rel="stylesheet" href="./site.css'), "index.html does not use the CSS bundle");
+report(index.includes('<h1 id="hero-title"><span>Keep the place</span><em>that changed everything.</em></h1>'), "The semantic hero headline is missing");
 for (const id of requiredIndexIds) {
   report(new RegExp(`\\bid=["']${id}["']`).test(index), `index.html is missing required interface ID: ${id}`);
 }
