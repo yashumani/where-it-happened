@@ -1,47 +1,30 @@
 # Where It Happened
 
-A mobile-first memory-map storefront and poster creator. Visitors can search for a meaningful place, personalize a map, choose a finished-file package, keep several designs in a local cart, and continue to a hosted checkout once the seller product keys are connected.
+A mobile-first memory-map studio and storefront. Visitors can search for a meaningful place, design a personalized poster, save exact design snapshots to a browser cart, and continue to a hosted checkout once payment links are configured.
+
+Live preview: `https://yashumani.github.io/where-it-happened/`
 
 ## What works now
 
-### Discovery and creation
-
-- Premium editorial landing page with direct calls to action
-- Explicit worldwide place search, plus a built-in catalogue of 50+ cities
-- Optional “use my location” action
-- Live MapLibre map using OpenFreeMap styles without an API key
-- Manual latitude/longitude entry for any exact coordinate
-- Editable title, place line, date, heading, and dedication
+- Editorial landing page with six one-click example stories
+- Prominent hero search that sends visitors directly into the creator
+- Fast built-in search across 50+ international cities
+- Global city, neighborhood, and landmark search through Wikipedia coordinates
+- Browser geolocation and manual latitude/longitude entry
+- Live MapLibre map using OpenFreeMap styles, with no map API key
+- Editable title, place line, date, small heading, and dedication
 - Seven story presets, five map moods, three layouts, and three formats
 - Direct map pan/zoom, marker toggle, label toggle, and recenter
 - Automatic design saving in `localStorage`
 - Stateful sharing through a compact URL hash
+- Three product tiers: Digital Keepsake, Print-Ready Pack, and Gift Edition
+- Persistent browser cart storing the exact design state and restorable design URL
+- Cart editing, product switching, removal, subtotal, and order-brief copying
+- Free watermarked PNG and print/PDF previews
+- Hosted-checkout handoff prepared for Payhip or Stripe Payment Links
+- Responsive behavior for 320px phones through desktop
 - Designed offline fallback when live map resources cannot load
-
-### Store and conversion
-
-- Three configurable digital products at $7, $12, and $18
-- Product-selection cards on the landing page and inside the editor
-- Persistent cart stored in the buyer’s browser
-- Multiple custom designs in one cart
-- Edit and remove actions for every cart item
-- Calculated subtotal and checkout review
-- Order packet containing the exact restorable design links
-- Payhip direct-checkout adapter, including multi-item checkout and metadata
-- Customer-friendly fallback while payment keys are not configured
-- Checkout-success page that restores the pending order reference from local storage
-
-### Preview protection
-
-- Free PNG export remains available as a clearly watermarked preview
-- Browser print/PDF preview is also watermarked
-- Finished watermark-free products are represented separately in the store
-
-## Current activation boundary
-
-The storefront, cart, pricing, order packet, and checkout handoff are implemented. Actual card/PayPal payment becomes active after the three seller-owned Payhip product keys are placed in `store-config.js`.
-
-See [CHECKOUT_SETUP.md](./CHECKOUT_SETUP.md) for the exact account and product setup.
+- No account, custom backend, analytics, or database
 
 ## Run locally
 
@@ -54,69 +37,76 @@ python3 -m http.server 8000
 
 Open `http://localhost:8000`.
 
-## Search implementation
+## Activate real payments
 
-Worldwide search uses the public OpenStreetMap Nominatim endpoint only when a visitor explicitly submits a query. It does **not** use remote autocomplete.
+The cart and checkout handoff are implemented, but checkout URLs are deliberately blank until the merchant account and products exist. The complete seller checklist is in [PAYMENTS_SETUP.md](PAYMENTS_SETUP.md).
 
-The current guardrails are:
+The lowest-cost recommended setup is Payhip's free plan. Create these three products using the same names and prices shown on the site:
 
-- one remote request at a time
-- at least 1.1 seconds between requests
-- local browser caching for repeated searches
-- built-in city results shown before remote results
-- visible OpenStreetMap attribution
-- a single endpoint constant that can be changed quickly if the service must be replaced
+1. Digital Keepsake — USD 7
+2. Print-Ready Pack — USD 12
+3. Gift Edition — USD 18
 
-This is suitable only for a moderate early-stage MVP. Move to a dedicated geocoding provider or proxy before meaningful traffic or paid promotion.
+For each product, copy its product URL or direct checkout URL and paste it into `store-config.js`:
 
-## Checkout architecture
+```js
+checkoutUrl: "https://payhip.com/buy?link=YOUR_PRODUCT_CODE"
+```
 
-The buyer’s design remains client-side. When an item is added to the cart, the app stores a sanitized snapshot of the design in `localStorage`. At checkout it creates:
+No private API secret belongs in this repository. Hosted checkout URLs are public links and are safe to keep in the static configuration.
 
-1. A human-readable order reference
-2. A restorable link for every map design
-3. A cart subtotal
-4. A hosted Payhip checkout URL
-5. Compact checkout metadata for a future webhook workflow
+The checkout module can send one item directly to Payhip or combine different configured products in one hosted checkout. It copies an order brief first and adds a safe order reference as checkout metadata. Repeated personalized copies of the same product should be purchased in separate checkouts during this static MVP so the hosted-cart quantity always matches the design brief.
 
-The intended first operational model is **custom digital fulfillment**: the buyer pastes the generated order packet into a required Payhip checkout question, and the finished files are delivered manually after purchase.
+## Product-delivery workflow for the MVP
 
-## File map
+Each cart item includes a restorable design URL. In Payhip, enable a required **Custom Checkout Question** named `Design details` and ask the buyer to paste the order brief copied by this website. This lets the seller reopen every exact map, wording choice, map position, theme, layout, and format after purchase. For a custom digital product, upload a small placeholder PDF that confirms the expected delivery timeframe while the personalized files are prepared.
 
-- `index.html` — landing page, shop, editor, cart, and checkout UI
-- `styles.css` — responsive design system, cart, product, and confirmation layouts
-- `app.js` — map state, search, cart, checkout, sharing, persistence, and export
-- `store-config.js` — product catalogue, pricing, currency, and Payhip keys
-- `cities.js` — built-in city catalogue
-- `thank-you.html` / `thank-you.js` — checkout-success experience
-- `CHECKOUT_SETUP.md` — payment activation instructions
-- `_headers` — Cloudflare-compatible CSP and permissions policy
-- `assets/favicon.svg` — provisional brand mark
+The public free preview is intentionally watermarked. Paid deliverables should be generated without the preview flag after the order is verified. A secure automatic unlock requires a small backend or payment webhook and is outside a purely static GitHub Pages deployment.
 
-## External runtime resources
+## Free deployment choices
+
+### Current preview: GitHub Pages
+
+The included `.github/workflows/pages.yml` publishes every update to `main`.
+
+### Recommended long-term public host: Cloudflare Pages
+
+Connect this repository to Cloudflare Pages. There is no build command and the publish directory is the repository root. The included `_headers` file adds security and permissions headers on hosts that support it.
+
+## Architecture
+
+This remains intentionally build-free:
+
+- `index.html` — semantic landing page, shop, editor, cart, and dialogs
+- `styles.css` — responsive design system, poster layouts, shop, and cart styling
+- `app.js` — design state, place search, map integration, persistence, sharing, and preview export
+- `commerce.js` — product selection, browser cart, order handoff, and checkout readiness
+- `store-config.js` — product names, prices, features, and hosted checkout URLs
+- `PAYMENTS_SETUP.md` — seller-owned Payhip activation and test-order checklist
+- `cities.js` — built-in zero-cost city catalogue
+- `assets/favicon.svg` — original provisional brand mark
+
+External runtime resources:
 
 - MapLibre GL JS from unpkg
 - OpenFreeMap vector-map styles and tiles
 - OpenStreetMap-derived map data
-- OpenStreetMap Nominatim for explicit worldwide search
-- Payhip for hosted checkout after configuration
+- Wikipedia Action API for notable-place search
 
-## Free deployment
+Poster and cart content stay in the browser unless the visitor shares a design link or continues to the external hosted checkout.
 
-### Current preview: GitHub Pages
+## Attribution
 
-The included `.github/workflows/pages.yml` publishes every push to `main`.
+Keep the visible map attribution:
 
-### Recommended commercial host: Cloudflare Pages
+`OpenFreeMap · OpenMapTiles · © OpenStreetMap contributors`
 
-Before public promotion, connect this repository to Cloudflare Pages. There is no build command and the publish directory is the repository root. The included `_headers` file is prepared for the map and search connections.
+Global place-search results are attributed to Wikipedia in the interface and footer.
 
-## Validation completed
+## Remaining launch work
 
-- JavaScript syntax checks
-- CSS parser checks
-- duplicate-ID and local-file-reference checks
-- browser interaction test for search, product selection, cart, duplicate prevention, checkout review, and mobile layout
-- 390px mobile overflow check
-
-A final real-payment test must be completed after Payhip keys are added.
+1. Create the free hosted-checkout account and paste the three product links into `store-config.js`.
+2. Add privacy, terms, refund, and delivery-policy pages.
+3. Decide whether paid files are manually fulfilled or unlocked through a lightweight backend/webhook.
+4. Test the live map, cart, preview exports, and checkout handoff on Safari/iPhone, Chrome/Android, and desktop browsers.
+5. Move the commercial launch to a custom domain and a host intended for business use.

@@ -1,7 +1,7 @@
 {
-  "name": "Where It Happened — Memory Map Studio",
+  "name": "Where It Happened \u2014 Memory Map Studio",
   "short_name": "Memory Maps",
-  "description": "Turn a meaningful place into a personalized memory-map poster.",
+  "description": "Search a meaningful place, design a personalized memory map, and save the exact version to a browser cart.",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#f3efe6",

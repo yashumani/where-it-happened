@@ -6,12 +6,12 @@
     <meta name="theme-color" content="#f3efe6" />
     <meta
       name="description"
-      content="Design a personalized memory map for free, then order watermark-free digital and print-ready files when it feels right."
+      content="Design a personalized memory-map poster, choose a digital product, and save the exact design in a private browser cart."
     />
     <meta property="og:title" content="Where It Happened — Memory Map Studio" />
     <meta
       property="og:description"
-      content="Search a meaningful place, personalize the map, preview it free, and order finished digital or print-ready artwork."
+      content="Search a city or landmark, create a personal map, and choose a digital keepsake, print-ready pack, or gift edition."
     />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
@@ -47,26 +47,18 @@
       </a>
 
       <nav class="header-nav" aria-label="Main navigation">
-        <a href="#shop">Shop</a>
         <a href="#examples">Ideas</a>
+        <a href="#shop">Shop</a>
         <a href="#how-it-works">How it works</a>
-        <button class="header-search-button" id="openSearch" type="button" aria-label="Search for a place">
+        <button class="header-cart-button" id="cartOpenButton" type="button" aria-label="Open empty cart">
           <svg aria-hidden="true" viewBox="0 0 20 20">
-            <circle cx="8.5" cy="8.5" r="4.8"></circle>
-            <path d="m12 12 4 4"></path>
-          </svg>
-          <span>Search</span>
-        </button>
-        <button class="cart-button" id="openCart" type="button" aria-haspopup="dialog" aria-controls="cartDrawer">
-          <svg aria-hidden="true" viewBox="0 0 20 20">
-            <path d="M3 4h2l1.4 8.1h8.5L17 7H6"></path>
-            <circle cx="8" cy="16" r="1"></circle>
-            <circle cx="15" cy="16" r="1"></circle>
+            <path d="M5.5 7.5h9l-.7 9h-7.6z"></path>
+            <path d="M7.5 8V6a2.5 2.5 0 0 1 5 0v2"></path>
           </svg>
           <span>Cart</span>
-          <b id="cartCount" aria-label="0 items in cart">0</b>
+          <strong id="cartCount" hidden>0</strong>
         </button>
-        <a href="#creator" class="button button-small button-ink header-create-button">Create your map</a>
+        <a href="#creator" class="button button-small button-ink">Create your map</a>
       </nav>
     </header>
 
@@ -76,33 +68,21 @@
           <p class="eyebrow"><span></span> A place can hold a whole story</p>
           <h1 id="hero-title">The place your story happened, turned into art.</h1>
           <p class="hero-lede">
-            Search any meaningful place, shape the story in your own words, and turn it
-            into a finished digital keepsake when the design feels right.
+            Make a personal map for where you met, your first home, a wedding city,
+            a favorite journey, or any place worth remembering.
           </p>
-
-          <form class="hero-place-search" id="heroSearchForm" role="search">
-            <label for="heroLocationSearch">Start with a place</label>
-            <div class="hero-search-row">
-              <svg class="hero-search-icon" aria-hidden="true" viewBox="0 0 20 20">
+          <form class="hero-place-search" id="heroPlaceSearchForm" role="search">
+            <label for="heroPlaceSearch">Start with a city or landmark</label>
+            <div>
+              <svg aria-hidden="true" viewBox="0 0 20 20">
                 <circle cx="8.5" cy="8.5" r="4.8"></circle>
                 <path d="m12 12 4 4"></path>
               </svg>
-              <input
-                id="heroLocationSearch"
-                type="search"
-                autocomplete="off"
-                placeholder="City, landmark, postcode, or address"
-                aria-describedby="heroSearchStatus"
-              />
-              <button class="button button-ink" id="heroSearchSubmit" type="submit">Find place</button>
+              <input id="heroPlaceSearch" type="search" autocomplete="off" placeholder="Try Paris, Central Park, Kyoto…" />
+              <button type="submit">Find this place</button>
             </div>
-            <div class="hero-search-results" id="heroSearchResults" hidden></div>
-            <div class="hero-search-meta">
-              <p id="heroSearchStatus" role="status">Search is triggered only when you press Find place.</p>
-              <button id="useMyLocationHero" type="button">Use my current location</button>
-            </div>
+            <p>Searches the built-in city list first, then notable places worldwide.</p>
           </form>
-
           <div class="hero-actions">
             <a class="button button-primary" href="#creator">
               Create your map
@@ -113,9 +93,9 @@
             <a class="text-link" href="#examples">See six ideas</a>
           </div>
           <div class="hero-notes" aria-label="Product details">
-            <span>Free preview</span>
-            <span>Paid HD options</span>
-            <span>Draft saved in your browser</span>
+            <span>Free to design</span>
+            <span>Buy only when ready</span>
+            <span>Saved in your browser</span>
           </div>
         </div>
 
@@ -164,78 +144,6 @@
         <p>Not just a map.</p>
         <span aria-hidden="true"></span>
         <p>A keepsake made from coordinates.</p>
-      </section>
-
-
-      <section class="shop-section section-shell" id="shop" aria-labelledby="shop-title">
-        <div class="section-heading split-heading shop-heading">
-          <div>
-            <p class="eyebrow"><span></span> Choose how to keep it</p>
-            <h2 id="shop-title">Design for free. Buy only the finished files you need.</h2>
-          </div>
-          <p>
-            Every order is tied to the exact map in your cart. Start with a free watermarked
-            proof, then choose a clean digital file or a print-ready bundle.
-          </p>
-        </div>
-
-        <div class="product-grid">
-          <article class="product-card" data-product-card="hd-digital">
-            <div class="product-art product-art-hd" aria-hidden="true"><span></span></div>
-            <p class="product-eyebrow">One finished file</p>
-            <div class="product-title-row">
-              <h3>HD Digital Map</h3>
-              <p><strong>$7</strong><span>USD</span></p>
-            </div>
-            <p>A watermark-free, high-resolution PNG in the format selected in the editor.</p>
-            <ul>
-              <li>One selected format</li>
-              <li>High-resolution PNG</li>
-              <li>Custom digital delivery</li>
-            </ul>
-            <button class="button button-outline button-full" type="button" data-shop-product="hd-digital">Choose HD Digital</button>
-          </article>
-
-          <article class="product-card product-card-featured" data-product-card="complete-digital">
-            <div class="product-ribbon">Most popular</div>
-            <div class="product-art product-art-complete" aria-hidden="true"><span></span><span></span><span></span></div>
-            <p class="product-eyebrow">The flexible set</p>
-            <div class="product-title-row">
-              <h3>Complete Digital Set</h3>
-              <p><strong>$12</strong><span>USD</span></p>
-            </div>
-            <p>Your design prepared for a portrait poster, a square post, and a phone wallpaper.</p>
-            <ul>
-              <li>Portrait, square, and wallpaper</li>
-              <li>Three watermark-free PNGs</li>
-              <li>Ready for sharing and gifting</li>
-            </ul>
-            <button class="button button-primary button-full" type="button" data-shop-product="complete-digital">Choose Complete Set</button>
-          </article>
-
-          <article class="product-card" data-product-card="print-ready">
-            <div class="product-art product-art-print" aria-hidden="true"><span></span></div>
-            <p class="product-eyebrow">Made for framing</p>
-            <div class="product-title-row">
-              <h3>Print-Ready Gift Set</h3>
-              <p><strong>$18</strong><span>USD</span></p>
-            </div>
-            <p>A polished digital print bundle prepared for popular frame and home-printer sizes.</p>
-            <ul>
-              <li>High-resolution PNG and PDF</li>
-              <li>8×10, 11×14, and A4 files</li>
-              <li>Watermark-free print artwork</li>
-            </ul>
-            <button class="button button-outline button-full" type="button" data-shop-product="print-ready">Choose Print-Ready</button>
-          </article>
-        </div>
-
-        <div class="shop-assurance" aria-label="Purchase information">
-          <span><i aria-hidden="true">✓</i> No account needed to design</span>
-          <span><i aria-hidden="true">✓</i> Cart stays on this device</span>
-          <span><i aria-hidden="true">✓</i> Secure hosted checkout</span>
-          <span><i aria-hidden="true">✓</i> Digital products only in this MVP</span>
-        </div>
       </section>
 
       <section class="examples section-shell" id="examples" aria-labelledby="examples-title">
@@ -290,6 +198,84 @@
         </div>
       </section>
 
+      <section class="shop section-shell" id="shop" aria-labelledby="shop-title">
+        <div class="section-heading split-heading shop-heading">
+          <div>
+            <p class="eyebrow"><span></span> Choose the finished product</p>
+            <h2 id="shop-title">Design for free. Keep the version that fits the moment.</h2>
+          </div>
+          <p>
+            Every purchase stays attached to the exact place, wording, map view, and style you created.
+            Start with a free watermarked preview; pay only for the finished files you need.
+          </p>
+        </div>
+
+        <div class="product-grid">
+          <article class="product-card">
+            <div class="product-card-top">
+              <span class="product-badge">Simple favorite</span>
+              <div class="product-price"><strong>$7</strong><small>one time</small></div>
+            </div>
+            <p class="product-kicker">Digital Keepsake</p>
+            <h3>A polished map for screens and personal archives.</h3>
+            <p>Receive a watermark-free, high-resolution PNG in the format you design.</p>
+            <ul>
+              <li>High-resolution PNG</li>
+              <li>Your selected format</li>
+              <li>Personal-use license</li>
+              <li>Restorable design link</li>
+            </ul>
+            <button class="button button-outline button-full product-select-button" type="button" data-select-product="digital" aria-pressed="false">
+              Choose Digital
+            </button>
+          </article>
+
+          <article class="product-card product-card-featured">
+            <div class="product-card-top">
+              <span class="product-badge">Most popular</span>
+              <div class="product-price"><strong>$12</strong><small>one time</small></div>
+            </div>
+            <p class="product-kicker">Print-Ready Pack</p>
+            <h3>The flexible set for printing, framing, and sharing.</h3>
+            <p>Get the digital keepsake plus a print-ready PDF and alternate aspect ratios.</p>
+            <ul>
+              <li>Everything in Digital</li>
+              <li>Print-ready PDF</li>
+              <li>Portrait, square, and wallpaper</li>
+              <li>Home-printing guide</li>
+            </ul>
+            <button class="button button-primary button-full product-select-button is-selected" type="button" data-select-product="printPack" aria-pressed="true">
+              Choose Print Pack
+            </button>
+          </article>
+
+          <article class="product-card">
+            <div class="product-card-top">
+              <span class="product-badge">For meaningful gifts</span>
+              <div class="product-price"><strong>$18</strong><small>one time</small></div>
+            </div>
+            <p class="product-kicker">Gift Edition</p>
+            <h3>A complete digital presentation for someone important.</h3>
+            <p>Add alternate captions, a shareable gift card, and a priority design review.</p>
+            <ul>
+              <li>Everything in Print Pack</li>
+              <li>Three caption variations</li>
+              <li>Gift-card image</li>
+              <li>Priority design review</li>
+            </ul>
+            <button class="button button-outline button-full product-select-button" type="button" data-select-product="gift" aria-pressed="false">
+              Choose Gift Edition
+            </button>
+          </article>
+        </div>
+
+        <div class="shop-assurance" aria-label="Shopping assurances">
+          <span><strong>Private draft</strong> Your design remains in your browser.</span>
+          <span><strong>Exact design saved</strong> The cart stores a restorable link.</span>
+          <span><strong>No subscription</strong> Each product is a one-time purchase.</span>
+        </div>
+      </section>
+
       <section class="how section-shell" id="how-it-works" aria-labelledby="how-title">
         <div class="section-heading centered-heading">
           <p class="eyebrow"><span></span> Three quiet steps</p>
@@ -313,8 +299,8 @@
           <li>
             <span>3</span>
             <div>
-              <h3>Keep or share it</h3>
-              <p>Download a PNG, print to PDF, or send a link that restores the design.</p>
+              <h3>Preview or purchase</h3>
+              <p>Download a free preview, add the exact design to cart, or share a restorable link.</p>
             </div>
           </li>
         </ol>
@@ -323,12 +309,12 @@
       <section class="creator-section" id="creator" aria-labelledby="creator-title">
         <div class="creator-heading section-shell">
           <div>
-            <p class="eyebrow eyebrow-light"><span></span> Free-to-design memory-map studio</p>
-            <h2 id="creator-title">Create it. Preview it. Add it to your cart.</h2>
+            <p class="eyebrow eyebrow-light"><span></span> Design free · purchase when ready</p>
+            <h2 id="creator-title">Create the exact version you want.</h2>
           </div>
           <p>
-            Your draft stays in this browser. Search, personalize, and preview for free;
-            choose a finished file pack only when the map is ready.
+            Search a city or landmark, personalize every detail, then save the exact version
+            to your cart. No account is required to begin.
           </p>
         </div>
 
@@ -385,17 +371,10 @@
                     <div class="combobox-list" id="locationOptions" role="listbox" hidden></div>
                   </div>
                   <p class="field-help" id="selectedLocationText">Selected: London, United Kingdom</p>
-                  <div class="location-utility-row">
-                    <button id="searchWorldwide" type="button">
-                      <svg aria-hidden="true" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7"></circle><path d="M3 10h14M10 3c2 2 3 4.3 3 7s-1 5-3 7M10 3c-2 2-3 4.3-3 7s1 5 3 7"></path></svg>
-                      Search worldwide
-                    </button>
-                    <button id="useMyLocation" type="button">
-                      <svg aria-hidden="true" viewBox="0 0 20 20"><circle cx="10" cy="10" r="3"></circle><path d="M10 2v3M10 15v3M2 10h3M15 10h3"></path></svg>
-                      Use my location
-                    </button>
+                  <div class="location-search-meta">
+                    <span id="locationSearchStatus">Built-in cities are instant. Global landmark results appear as you type.</span>
+                    <button id="useMyLocation" type="button">Use my location</button>
                   </div>
-                  <p class="location-search-status" id="locationSearchStatus" role="status">Popular cities appear instantly. Worldwide search runs only when requested.</p>
                 </div>
 
                 <details class="advanced-location">
@@ -583,43 +562,26 @@
               <p>Your draft stays on this device unless you share its link.</p>
             </div>
 
-
-            <section class="purchase-builder" aria-labelledby="purchase-builder-title">
-              <div class="purchase-builder-heading">
+            <section class="purchase-bar" aria-labelledby="purchase-bar-title">
+              <div class="purchase-bar-copy">
+                <p id="purchase-bar-title">Ready to keep this exact design?</p>
                 <div>
-                  <p class="eyebrow"><span></span> Finish this exact design</p>
-                  <h3 id="purchase-builder-title">Choose a file pack for your map.</h3>
+                  <strong id="purchaseProductName">Print-Ready Pack</strong>
+                  <span id="purchaseProductPrice">$12</span>
                 </div>
-                <p>The free preview stays available. Paid files are prepared without the preview watermark.</p>
+                <small id="purchaseProductDelivery">PNG + print-ready PDF</small>
               </div>
-
-              <div class="product-choice-list" id="productChoices" role="radiogroup" aria-label="File pack">
-                <button type="button" data-product-id="hd-digital" aria-pressed="false">
-                  <span><strong>HD Digital</strong><small>One high-resolution PNG</small></span>
-                  <b>$7</b>
-                </button>
-                <button class="is-selected" type="button" data-product-id="complete-digital" aria-pressed="true">
-                  <span><em>Most popular</em><strong>Complete Digital Set</strong><small>Portrait, square, and wallpaper</small></span>
-                  <b>$12</b>
-                </button>
-                <button type="button" data-product-id="print-ready" aria-pressed="false">
-                  <span><strong>Print-Ready Gift Set</strong><small>PNG + PDF in three print sizes</small></span>
-                  <b>$18</b>
-                </button>
-              </div>
-
-              <div class="current-order-card">
-                <div class="current-order-copy">
-                  <small>Adding to cart</small>
-                  <strong id="selectedProductName">Complete Digital Set</strong>
-                  <span id="selectedProductDescription">Portrait, square, and wallpaper files.</span>
-                </div>
-                <div class="current-order-price" id="selectedProductPrice">$12</div>
-                <button class="button button-primary" id="addCurrentDesignToCart" type="button">
-                  <svg aria-hidden="true" viewBox="0 0 20 20"><path d="M3 4h2l1.4 8.1h8.5L17 7H6M10 5v5M7.5 7.5h5"></path></svg>
-                  Add this design to cart
-                </button>
-              </div>
+              <label class="purchase-product-picker">
+                <span>Product</span>
+                <select id="purchaseProductSelect" aria-label="Choose product"></select>
+              </label>
+              <button class="button button-primary" id="addCurrentDesignToCart" type="button">
+                <svg aria-hidden="true" viewBox="0 0 20 20">
+                  <path d="M5.5 7.5h9l-.7 9h-7.6z"></path>
+                  <path d="M7.5 8V6a2.5 2.5 0 0 1 5 0v2M10 10v4M8 12h4"></path>
+                </svg>
+                Add current design to cart
+              </button>
             </section>
 
             <div class="export-actions" aria-label="Export and sharing actions">
@@ -629,7 +591,7 @@
                 </svg>
                 <span>
                   <strong>Download free preview</strong>
-                  <small>Watermarked screen-resolution proof</small>
+                  <small>Watermarked PNG</small>
                 </span>
               </button>
               <button class="button button-secondary-action" id="printPdf" type="button">
@@ -637,8 +599,8 @@
                   <path d="M6 7V3h8v4M5 14H3V8h14v6h-2M6 12h8v5H6z"></path>
                 </svg>
                 <span>
-                  <strong>Preview print layout</strong>
-                  <small>Watermarked browser proof</small>
+                  <strong>Print preview</strong>
+                  <small>Watermarked browser PDF</small>
                 </span>
               </button>
               <button class="button button-secondary-action" id="shareDesign" type="button">
@@ -662,7 +624,7 @@
               </svg>
               <div>
                 <strong>Private by default</strong>
-                <p>Your design and cart stay in this browser. Checkout is hosted securely by the connected payment provider.</p>
+                <p>No design is uploaded to our server in this MVP. Saving happens through your browser’s local storage.</p>
               </div>
             </div>
           </section>
@@ -672,7 +634,10 @@
       <section class="closing section-shell" aria-labelledby="closing-title">
         <p class="eyebrow"><span></span> A small object with a long memory</p>
         <h2 id="closing-title">Some places are too important to leave as a pin in an app.</h2>
-        <a class="button button-primary" href="#creator">Create yours and add it to cart</a>
+        <div class="closing-actions">
+          <a class="button button-primary" href="#creator">Make yours now</a>
+          <button class="button button-outline" id="closingCartButton" type="button">Open cart</button>
+        </div>
       </section>
     </main>
 
@@ -687,80 +652,70 @@
         </span>
         <div>
           <strong>Where It Happened</strong>
-          <p>A free-to-design memory-map studio with digital products.</p>
+          <p>A personal memory-map studio with a browser-based cart.</p>
         </div>
       </div>
       <div class="footer-links">
         <a href="#top">Top</a>
-        <a href="#shop">Shop</a>
         <a href="#creator">Creator</a>
+        <a href="#shop">Shop</a>
+        <a href="https://www.wikipedia.org/" rel="noreferrer">Wikipedia search</a>
         <a href="https://maplibre.org/" rel="noreferrer">MapLibre</a>
         <a href="https://openfreemap.org/" rel="noreferrer">OpenFreeMap</a>
-        <a href="https://www.openstreetmap.org/copyright" rel="noreferrer">OpenStreetMap</a>
       </div>
-      <p class="footer-attribution">Map data © OpenStreetMap contributors. Map styles served by OpenFreeMap.</p>
+      <p class="footer-attribution">Map data © OpenStreetMap contributors. Map styles served by OpenFreeMap. Global landmark search results are provided by Wikipedia.</p>
     </footer>
 
-    <div class="cart-shell" id="cartShell" hidden>
-      <button class="cart-backdrop" id="cartBackdrop" type="button" aria-label="Close cart"></button>
-      <aside class="cart-drawer" id="cartDrawer" role="dialog" aria-modal="true" aria-labelledby="cartTitle" tabindex="-1">
+    <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
+
+    <dialog class="cart-drawer" id="cartDialog" aria-labelledby="cart-title">
+      <section class="cart-shell">
         <header class="cart-header">
           <div>
-            <p class="eyebrow"><span></span> Your designs</p>
-            <h2 id="cartTitle">Cart</h2>
+            <p class="eyebrow"><span></span> Saved in this browser</p>
+            <h2 id="cart-title">Your cart</h2>
           </div>
-          <button class="cart-close" id="closeCart" type="button" aria-label="Close cart">×</button>
+          <button class="dialog-icon-button" id="cartCloseButton" type="button" aria-label="Close cart">×</button>
         </header>
-        <div class="cart-body">
-          <div class="cart-empty" id="cartEmpty">
-            <div aria-hidden="true">⌖</div>
-            <h3>Your cart is waiting for a story.</h3>
-            <p>Choose a place, personalize the map, and add the finished design here.</p>
-            <button class="button button-ink" id="cartStartDesign" type="button">Create a map</button>
-          </div>
-          <div class="cart-items" id="cartItems"></div>
+        <div class="cart-empty" id="cartEmpty">
+          <span aria-hidden="true">◎</span>
+          <h3>Your first design is still in the studio.</h3>
+          <p>Choose a product, then add the current map to keep its exact text, coordinates, style, and framing.</p>
+          <button class="button button-ink button-full" id="cartReturnToCreator" type="button">Return to the creator</button>
         </div>
-        <footer class="cart-footer" id="cartFooter" hidden>
-          <div class="cart-subtotal-row">
+        <div class="cart-items" id="cartItems"></div>
+        <footer class="cart-footer">
+          <div class="cart-total-row">
             <span>Subtotal</span>
             <strong id="cartSubtotal">$0</strong>
           </div>
-          <p>Taxes, if applicable, are calculated by the secure checkout provider.</p>
-          <button class="button button-primary button-full" id="checkoutCart" type="button">Continue to secure checkout</button>
-          <small id="checkoutAvailability">Your cart is saved locally on this device.</small>
+          <p>Taxes, if applicable, are calculated by the hosted checkout provider.</p>
+          <button class="button button-primary button-full" id="cartCheckoutButton" type="button" disabled>Continue to secure checkout</button>
+          <button class="cart-clear-button" id="cartClearButton" type="button" disabled>Clear cart</button>
         </footer>
-      </aside>
-    </div>
-
-    <dialog class="checkout-dialog" id="checkoutDialog">
-      <form method="dialog">
-        <button class="dialog-close" value="cancel" aria-label="Close checkout">×</button>
-        <p class="eyebrow"><span></span> Secure checkout handoff</p>
-        <h2 id="checkoutDialogTitle">Your order details are ready.</h2>
-        <p id="checkoutDialogIntro">We will copy the design details first, then open the secure hosted payment page.</p>
-
-        <div class="checkout-order-preview" id="checkoutOrderPreview"></div>
-
-        <label class="checkout-packet-label" for="checkoutPacket">Design details</label>
-        <textarea id="checkoutPacket" rows="8" readonly></textarea>
-        <p class="checkout-instruction" id="checkoutInstruction">
-          Paste these details into the required “Design details” question on the checkout page.
-        </p>
-
-        <div class="checkout-actions-ready" id="checkoutReadyActions">
-          <button class="button button-primary button-full" id="copyAndCheckout" type="button">Copy details &amp; continue to payment</button>
-          <button class="text-button" id="copyCheckoutPacket" type="button">Copy details only</button>
-        </div>
-
-        <div class="checkout-setup-note" id="checkoutSetupNote" hidden>
-          <strong>Secure checkout is being connected.</strong>
-          <p>Your cart and exact design links are saved on this device. Copy the order details now so nothing is lost while payment goes live.</p>
-          <button class="button button-ink button-full" id="copySetupOrder" type="button">Copy saved order details</button>
-        </div>
-      </form>
+      </section>
     </dialog>
 
-    <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
+    <dialog class="checkout-dialog" id="checkoutDialog" aria-labelledby="checkout-title">
+      <section>
+        <header class="checkout-header">
+          <div>
+            <p class="eyebrow"><span></span> Order handoff</p>
+            <h2 id="checkout-title">Review your order</h2>
+          </div>
+          <button class="dialog-icon-button" id="checkoutCloseButton" type="button" aria-label="Close checkout">×</button>
+        </header>
+        <div class="checkout-items" id="checkoutItems"></div>
+        <div class="checkout-total-row"><span>Total</span><strong id="checkoutTotal">$0</strong></div>
+        <div class="checkout-status is-pending" id="checkoutStatus">
+          <strong>Payment connection is being finalized</strong>
+          <span>Your design is safely stored in this browser cart.</span>
+        </div>
+        <button class="button button-primary button-full" id="checkoutPrimaryButton" type="button" disabled>Secure checkout coming next</button>
+        <button class="button button-outline button-full" id="copyOrderBriefButton" type="button">Copy order brief and design links</button>
+        <p class="checkout-note">No card details are collected by this website. Payment will happen on the connected hosted checkout.</p>
+      </section>
+    </dialog>
 
     <dialog class="confirm-dialog" id="resetDialog">
       <form method="dialog">

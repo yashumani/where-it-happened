@@ -1,69 +1,65 @@
+/**
+ * Store configuration for the static MVP.
+ *
+ * Hosted checkout links are intentionally public configuration, not secrets.
+ * Create matching products in Payhip (or replace these with Stripe Payment
+ * Links) and paste the direct checkout URLs below to activate real payments.
+ */
 export const STORE_CONFIG = Object.freeze({
-  brand: "Where It Happened",
   currency: "USD",
   locale: "en-US",
-  provider: "payhip",
-  defaultProductId: "complete-digital",
-  payhipCheckoutBase: "https://payhip.com/buy",
-  checkoutSuccessPath: "./thank-you.html",
-  products: Object.freeze([
-    Object.freeze({
-      id: "hd-digital",
-      name: "HD Digital Map",
-      shortName: "HD Digital",
+  checkoutProvider: "Payhip",
+  checkoutProviderUrl: "https://payhip.com/",
+  products: Object.freeze({
+    digital: Object.freeze({
+      id: "digital",
+      name: "Digital Keepsake",
+      shortName: "Digital",
       price: 7,
-      payhipKey: "REPLACE_WITH_PAYHIP_HD_KEY",
-      eyebrow: "One finished file",
-      description: "A clean, watermark-free high-resolution PNG in your chosen format.",
-      delivery: "Custom digital delivery",
-      includes: Object.freeze([
-        "One selected format",
-        "High-resolution PNG",
-        "No preview watermark"
-      ])
+      badge: "Simple favorite",
+      description: "A clean, watermark-free map for sharing, screens, and personal archives.",
+      delivery: "High-resolution PNG",
+      features: Object.freeze([
+        "Watermark-free high-resolution PNG",
+        "Your chosen poster format",
+        "Personal-use license",
+        "Design link saved with the order"
+      ]),
+      checkoutUrl: ""
     }),
-    Object.freeze({
-      id: "complete-digital",
-      name: "Complete Digital Set",
-      shortName: "Complete Set",
+    printPack: Object.freeze({
+      id: "printPack",
+      name: "Print-Ready Pack",
+      shortName: "Print pack",
       price: 12,
-      payhipKey: "REPLACE_WITH_PAYHIP_COMPLETE_KEY",
-      eyebrow: "Most popular",
-      description: "Your map prepared as a portrait poster, square post, and phone wallpaper.",
-      delivery: "Custom digital delivery",
-      featured: true,
-      includes: Object.freeze([
-        "Portrait, square, and wallpaper",
-        "Three watermark-free PNGs",
-        "Ready for sharing and gifting"
-      ])
+      badge: "Most popular",
+      description: "The flexible set for printing at home, through a local shop, or as a gift.",
+      delivery: "PNG + print-ready PDF",
+      features: Object.freeze([
+        "Everything in Digital Keepsake",
+        "Print-ready PDF",
+        "Portrait, square, and wallpaper versions",
+        "Simple home-printing guide"
+      ]),
+      checkoutUrl: ""
     }),
-    Object.freeze({
-      id: "print-ready",
-      name: "Print-Ready Gift Set",
-      shortName: "Print-Ready",
+    gift: Object.freeze({
+      id: "gift",
+      name: "Gift Edition",
+      shortName: "Gift edition",
       price: 18,
-      payhipKey: "REPLACE_WITH_PAYHIP_PRINT_KEY",
-      eyebrow: "Made for framing",
-      description: "A polished print bundle prepared for popular frame and home-printer sizes.",
-      delivery: "Custom digital delivery",
-      includes: Object.freeze([
-        "High-resolution PNG and PDF",
-        "8×10, 11×14, and A4 files",
-        "Watermark-free print artwork"
-      ])
+      badge: "For meaningful gifts",
+      description: "A complete digital gift set with alternate captions and presentation files.",
+      delivery: "Complete digital gift set",
+      features: Object.freeze([
+        "Everything in Print-Ready Pack",
+        "Three caption variations",
+        "Gift-card image for sharing",
+        "Priority design review before delivery"
+      ]),
+      checkoutUrl: ""
     })
-  ])
+  })
 });
 
-export const PRODUCT_BY_ID = Object.freeze(
-  Object.fromEntries(STORE_CONFIG.products.map((product) => [product.id, product]))
-);
-
-export function isPayhipProductConfigured(product) {
-  return Boolean(
-    product?.payhipKey &&
-      !product.payhipKey.startsWith("REPLACE_WITH_") &&
-      /^[A-Za-z0-9_-]{3,}$/.test(product.payhipKey)
-  );
-}
+export const PRODUCT_LIST = Object.freeze(Object.values(STORE_CONFIG.products));
