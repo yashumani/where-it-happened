@@ -1,9 +1,14 @@
+import "./atelier.js";
 import { CITIES, CITY_BY_ID } from "./cities.js";
 import { initCommerce } from "./commerce.js";
 
 const STORAGE_KEY = "where-it-happened.design.v1";
 const SHARED_HASH_PREFIX = "#design=";
 const MAP_STYLE_BASE = "https://tiles.openfreemap.org/styles/";
+const MAPLIBRE_VERSION = "5.24.0";
+const MAPLIBRE_SCRIPT_URL = `https://unpkg.com/maplibre-gl@${MAPLIBRE_VERSION}/dist/maplibre-gl.js`;
+const MAPLIBRE_STYLE_URL = `https://unpkg.com/maplibre-gl@${MAPLIBRE_VERSION}/dist/maplibre-gl.css`;
+const MAPLIBRE_LOAD_TIMEOUT_MS = 12000;
 const WIKIPEDIA_SEARCH_ENDPOINT = "https://en.wikipedia.org/w/api.php";
 
 const THEMES = {
@@ -157,6 +162,10 @@ let state = loadInitialState();
 let map = null;
 let mapIsUsable = false;
 let mapFailureTimer = null;
+let mapLibraryPromise = null;
+let mapReadyPromise = null;
+let mapReadyResolve = null;
+let mapInitializationObserver = null;
 let activeLocationIndex = -1;
 let locationResults = [];
 let globalSearchTimer = null;
@@ -214,13 +223,13 @@ function boot() {
   hydrateControlsFromState();
   bindEvents();
   renderAll({ updateMap: false });
-  initializeMap();
+  scheduleMapInitialization();
   initCommerce({
     getDesignState: () => JSON.parse(JSON.stringify(state)),
     getDesignUrl: buildShareUrl,
     loadDesignState: restoreDesignFromCart,
     showToast,
-    scrollToCreator: () => $("#creator").scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" })
+    scrollToCreator: () => scrollToElement($("#creator"))
   });
 
   if (window.location.hash.startsWith(SHARED_HASH_PREFIX)) {
@@ -282,7 +291,23 @@ function bindEvents() {
   $$("[data-example]").forEach((button) => {
     button.addEventListener("click", () => {
       applyExample(button.dataset.example);
-      $("#creator").scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+      void ensureMapInitialized();
+      scrollToElement($("#creator"));
+    });
+  });
+
+  $$('a[href^="#"]').forEach((anchor) => {
+    anchor.addEventListener("click", (event) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const id = anchor.getAttribute("href")?.slice(1);
+      const target = id ? document.getElementById(id) : null;
+      if (!target) return;
+      event.preventDefault();
+      scrollToElement(target, { forceInstant: anchor.classList.contains("skip-link") });
+      if (anchor.classList.contains("skip-link")) {
+        target.tabIndex = -1;
+        window.requestAnimationFrame(() => target.focus({ preventScroll: true }));
+      }
     });
   });
 
@@ -406,7 +431,7 @@ function sanitizeState(candidate) {
   return {
     version: 1,
     occasion: knownOccasion,
-    locationId: typeof source.locationId === "string" ? source.locationId : locationFromId?.id ?? "custom",
+    locationId: typeof source.locationId === "string" ? source.locationId.slice(0, 120) : locationFromId?.id ?? "custom",
     city: safeText(source.city, locationFromId?.city ?? "Custom location", 80),
     country: safeText(source.country, locationFromId?.country ?? "Exact coordinates", 80),
     lat,
@@ -594,7 +619,10 @@ function setTheme(theme) {
 }
 
 function setMapStyle(theme, { jumpToLocation = false } = {}) {
-  if (!map) return;
+  if (!map) {
+    void ensureMapInitialized();
+    return;
+  }
   mapIsUsable = false;
   map.setStyle(THEMES[theme].style, { diff: false });
   if (jumpToLocation) {
@@ -615,7 +643,8 @@ function handleHeroPlaceSearch(event) {
     return;
   }
 
-  $("#creator").scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+  void ensureMapInitialized();
+  scrollToElement($("#creator"));
   elements.locationSearch.value = query;
   window.setTimeout(() => {
     elements.locationSearch.focus();
@@ -1029,12 +1058,143 @@ function applyManualCoordinates() {
   showToast("Coordinates applied", `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
 }
 
-function initializeMap() {
-  if (!window.maplibregl) {
-    showMapFallback();
-    console.warn("MapLibre did not load; the designed offline fallback is active.");
+function scheduleMapInitialization() {
+  const creator = $("#creator");
+  const prewarm = () => void ensureMapInitialized();
+
+  document.querySelectorAll('a[href="#creator"], [data-example], #heroPlaceSearchForm').forEach((element) => {
+    element.addEventListener("pointerenter", prewarm, { once: true, passive: true });
+    element.addEventListener("focusin", prewarm, { once: true });
+    element.addEventListener("click", prewarm, { once: true });
+  });
+
+  if (!creator || !("IntersectionObserver" in window)) {
+    window.setTimeout(prewarm, 900);
     return;
   }
+
+  mapInitializationObserver = new IntersectionObserver(
+    (entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      mapInitializationObserver?.disconnect();
+      mapInitializationObserver = null;
+      prewarm();
+    },
+    { rootMargin: "1400px 0px", threshold: 0 }
+  );
+  mapInitializationObserver.observe(creator);
+}
+
+async function ensureMapInitialized() {
+  if (map && mapReadyPromise) return mapReadyPromise;
+  if (mapLibraryPromise) return mapLibraryPromise;
+
+  setMapFallbackState("loading");
+  mapLibraryPromise = Promise.allSettled([
+    loadExternalStylesheet(MAPLIBRE_STYLE_URL),
+    loadExternalScript(MAPLIBRE_SCRIPT_URL)
+  ])
+    .then((results) => {
+      const scriptResult = results[1];
+      if (scriptResult.status === "rejected" || !window.maplibregl) {
+        throw scriptResult.status === "rejected" ? scriptResult.reason : new Error("MapLibre did not initialize.");
+      }
+      if (!map && !initializeMap()) throw new Error("The live map could not be created.");
+      return mapReadyPromise || true;
+    })
+    .catch((error) => {
+      console.warn("The live map could not load; the vector fallback remains available.", error);
+      mapLibraryPromise = null;
+      setMapFallbackState("error");
+      return false;
+    });
+
+  return mapLibraryPromise;
+}
+
+function loadExternalScript(source) {
+  if (window.maplibregl) return Promise.resolve();
+  const existing = document.querySelector(`script[src="${source}"]`);
+  if (existing?.dataset.loaded === "true") return Promise.resolve();
+
+  return new Promise((resolve, reject) => {
+    const script = existing || document.createElement("script");
+    let timeout = 0;
+    const cleanup = () => {
+      window.clearTimeout(timeout);
+      script.removeEventListener("load", handleLoad);
+      script.removeEventListener("error", handleError);
+    };
+    const handleLoad = () => {
+      cleanup();
+      script.dataset.loaded = "true";
+      resolve();
+    };
+    const handleError = () => {
+      cleanup();
+      if (!existing) script.remove();
+      reject(new Error(`Could not load ${source}`));
+    };
+
+    script.addEventListener("load", handleLoad, { once: true });
+    script.addEventListener("error", handleError, { once: true });
+    timeout = window.setTimeout(handleError, MAPLIBRE_LOAD_TIMEOUT_MS);
+    if (!existing) {
+      script.src = source;
+      script.async = true;
+      script.crossOrigin = "anonymous";
+      document.head.append(script);
+    }
+  });
+}
+
+function loadExternalStylesheet(source) {
+  const existing = document.querySelector(`link[rel="stylesheet"][href="${source}"]`);
+  if (existing?.dataset.loaded === "true") return Promise.resolve();
+
+  return new Promise((resolve, reject) => {
+    const link = existing || document.createElement("link");
+    let timeout = 0;
+    const cleanup = () => {
+      window.clearTimeout(timeout);
+      link.removeEventListener("load", handleLoad);
+      link.removeEventListener("error", handleError);
+    };
+    const handleLoad = () => {
+      cleanup();
+      link.dataset.loaded = "true";
+      resolve();
+    };
+    const handleError = () => {
+      cleanup();
+      if (!existing) link.remove();
+      reject(new Error(`Could not load ${source}`));
+    };
+
+    link.addEventListener("load", handleLoad, { once: true });
+    link.addEventListener("error", handleError, { once: true });
+    timeout = window.setTimeout(handleError, MAPLIBRE_LOAD_TIMEOUT_MS);
+    if (!existing) {
+      link.rel = "stylesheet";
+      link.href = source;
+      link.crossOrigin = "anonymous";
+      document.head.append(link);
+    }
+  });
+}
+
+function initializeMap() {
+  if (!window.maplibregl || map) return Boolean(map);
+
+  mapReadyPromise = new Promise((resolve) => {
+    mapReadyResolve = resolve;
+  });
+  const settleReady = (ready) => {
+    const resolve = mapReadyResolve;
+    mapReadyResolve = null;
+    if (resolve) resolve(ready);
+    mapReadyPromise = Promise.resolve(ready);
+  };
 
   try {
     map = new window.maplibregl.Map({
@@ -1062,6 +1222,7 @@ function initializeMap() {
       applyLabelVisibility();
       applyMarkerVisibility();
       window.clearTimeout(mapFailureTimer);
+      settleReady(true);
     });
 
     map.on("style.load", () => {
@@ -1071,12 +1232,14 @@ function initializeMap() {
       applyLabelVisibility();
       applyMarkerVisibility();
       map.resize();
+      settleReady(true);
     });
 
     map.on("idle", () => {
       mapIsUsable = true;
       hideMapFallback();
       window.clearTimeout(mapFailureTimer);
+      settleReady(true);
     });
 
     map.on("zoom", () => {
@@ -1102,11 +1265,17 @@ function initializeMap() {
     });
 
     mapFailureTimer = window.setTimeout(() => {
-      if (!mapIsUsable) showMapFallback();
-    }, 6500);
+      if (mapIsUsable) return;
+      setMapFallbackState("error");
+      settleReady(false);
+    }, 8000);
+    return true;
   } catch (error) {
     console.error("The map could not initialize.", error);
-    showMapFallback();
+    setMapFallbackState("error");
+    settleReady(false);
+    map = null;
+    return false;
   }
 }
 
@@ -1189,12 +1358,29 @@ function applyLabelVisibility() {
   });
 }
 
-function showMapFallback() {
+function setMapFallbackState(mode = "error") {
+  if (!elements.mapFallback) return;
+  const strong = elements.mapFallback.querySelector("strong");
+  const detail = elements.mapFallback.querySelector("span");
+  elements.mapFallback.dataset.state = mode;
   elements.mapFallback.hidden = false;
+  if (mode === "loading") {
+    if (strong) strong.textContent = "Loading the live map";
+    if (detail) detail.textContent = "The editor is ready while map resources connect.";
+  } else {
+    if (strong) strong.textContent = "Map preview is offline";
+    if (detail) detail.textContent = "Your words and layout are still ready. Reconnect to load the live map.";
+  }
+}
+
+function showMapFallback() {
+  setMapFallbackState("error");
 }
 
 function hideMapFallback() {
+  if (!elements.mapFallback) return;
   elements.mapFallback.hidden = true;
+  delete elements.mapFallback.dataset.state;
 }
 
 function scheduleMapResize() {
@@ -1252,6 +1438,7 @@ async function handleDownload() {
   document.body.classList.add("is-exporting");
 
   try {
+    await ensureMapInitialized();
     const canvas = await composePosterCanvas({ preview: true });
     const blob = await canvasToBlob(canvas, "image/png");
     const filename = `${slugify(state.city || "custom-place")}-${slugify(state.title || "memory-map")}-preview.png`;
@@ -1267,6 +1454,7 @@ async function handleDownload() {
 }
 
 async function handlePrint() {
+  const mapReady = ensureMapInitialized();
   const printWindow = window.open("", "_blank");
   if (!printWindow) {
     showToast("Pop-up blocked", "Allow pop-ups for this site, then try Print / PDF again.", true);
@@ -1277,10 +1465,15 @@ async function handlePrint() {
   setButtonBusy(elements.printPdf, true, "Preparing print…");
 
   try {
+    await mapReady;
     const canvas = await composePosterCanvas({ preview: true });
     const blob = await canvasToBlob(canvas, "image/png");
     const objectUrl = URL.createObjectURL(blob);
-    const pageOrientation = state.format === "square" ? "portrait" : state.format === "wallpaper" ? "portrait" : "portrait";
+    const pageSize = {
+      portrait: "8in 10in",
+      square: "10in 10in",
+      wallpaper: "9in 16in"
+    }[state.format] || "8in 10in";
 
     printWindow.document.open();
     printWindow.document.write(`
@@ -1290,25 +1483,29 @@ async function handlePrint() {
           <meta charset="utf-8" />
           <title>${escapeHtml(state.title || "Memory map")}</title>
           <style>
-            @page { size: ${pageOrientation}; margin: 0; }
-            html, body { margin: 0; background: #fff; }
-            body { display: grid; min-height: 100vh; place-items: center; }
-            img { display: block; width: 100%; height: 100vh; object-fit: contain; }
-            @media print { img { height: 100vh; } }
+            @page { size: ${pageSize}; margin: 0; }
+            html, body { width: 100%; height: 100%; margin: 0; background: #fff; }
+            body { display: grid; place-items: center; }
+            img { display: block; width: 100%; height: 100%; object-fit: contain; }
           </style>
         </head>
         <body>
           <img src="${objectUrl}" alt="${escapeHtml(state.title || "Personalized memory map")}" />
-          <script>
-            const image = document.querySelector('img');
-            image.addEventListener('load', () => setTimeout(() => window.print(), 180));
-            window.addEventListener('afterprint', () => window.close());
-          <\/script>
         </body>
       </html>
     `);
     printWindow.document.close();
-    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 120000);
+
+    const image = printWindow.document.querySelector("img");
+    const releaseObjectUrl = () => URL.revokeObjectURL(objectUrl);
+    const openPrintDialog = () => printWindow.setTimeout(() => printWindow.print(), 180);
+    if (image?.complete) openPrintDialog();
+    else image?.addEventListener("load", openPrintDialog, { once: true });
+    printWindow.addEventListener("afterprint", () => {
+      releaseObjectUrl();
+      printWindow.close();
+    }, { once: true });
+    window.setTimeout(releaseObjectUrl, 600000);
     showToast("Print preview opened", "Choose “Save as PDF” in your browser’s print dialog. The free version is watermarked.");
   } catch (error) {
     console.error("Print preparation failed.", error);
@@ -1910,6 +2107,37 @@ function darkenForOverlay(color, alpha) {
   const green = Math.round(((integer >> 8) & 255) * 0.32);
   const blue = Math.round((integer & 255) * 0.32);
   return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
+function scrollToElement(element, { forceInstant = false } = {}) {
+  if (!element) return;
+  if (element.id === "top") {
+    const root = document.documentElement;
+    const previousBehavior = root.style.scrollBehavior;
+    root.style.scrollBehavior = "auto";
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    window.requestAnimationFrame(() => {
+      root.style.scrollBehavior = previousBehavior;
+    });
+    return;
+  }
+  const rect = element.getBoundingClientRect();
+  const headerOffset = 90;
+  const distance = Math.abs(rect.top - headerOffset);
+  const shouldJump = forceInstant || reducedMotion || distance > window.innerHeight * 2.5;
+
+  if (!shouldJump) {
+    element.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+
+  const root = document.documentElement;
+  const previousBehavior = root.style.scrollBehavior;
+  root.style.scrollBehavior = "auto";
+  window.scrollTo({ top: Math.max(0, window.scrollY + rect.top - headerOffset), left: 0, behavior: "auto" });
+  window.requestAnimationFrame(() => {
+    root.style.scrollBehavior = previousBehavior;
+  });
 }
 
 function debounce(callback, wait) {

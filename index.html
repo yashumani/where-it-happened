@@ -3,31 +3,30 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#f3efe6" />
+    <meta name="theme-color" content="#071722" />
     <meta
       name="description"
-      content="Design a personalized memory-map poster, choose a digital product, and save the exact design in a private browser cart."
+      content="Turn a meaningful city, street, or landmark into an editorial memory-map artwork made to keep, print, or give."
     />
-    <meta property="og:title" content="Where It Happened — Memory Map Studio" />
+    <meta property="og:title" content="Where It Happened — Cartographic Memory Atelier" />
     <meta
       property="og:description"
-      content="Search a city or landmark, create a personal map, and choose a digital keepsake, print-ready pack, or gift edition."
+      content="Find the place that changed your story and compose its coordinates as a personal map artwork."
     />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
     <link rel="manifest" href="./site.webmanifest" />
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css"
-    />
-    <link rel="stylesheet" href="./styles.css" />
-    <title>Where It Happened — Memory Map Studio</title>
-    <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+    <link rel="stylesheet" href="./site.css" />
+    <link rel="modulepreload" href="./atelier.js" />
+    <link rel="modulepreload" href="./cities.js" />
+    <link rel="modulepreload" href="./commerce.js" />
+    <link rel="modulepreload" href="./store-config.js" />
+    <title>Where It Happened — Cartographic Memory Atelier</title>
     <script type="module" src="./app.js"></script>
   </head>
 
-  <body>
+  <body class="atelier-theme scroll-story-theme wizard-loading atelier-motion">
     <a class="skip-link" href="#creator">Skip to the map creator</a>
     <div class="page-grain" aria-hidden="true"></div>
 
@@ -62,17 +61,23 @@
       </nav>
     </header>
 
+    <aside class="cart-resume-banner" id="cartResumeBanner" hidden aria-label="Saved cart reminder">
+      <div><strong data-resume-count>Saved designs</strong><span data-resume-total>$0</span></div>
+      <p>Your cart is stored in this browser.</p>
+      <button type="button" id="cartResumeOpen">Resume cart</button>
+    </aside>
+
     <main>
       <section class="hero section-shell" aria-labelledby="hero-title">
-        <div class="hero-copy">
-          <p class="eyebrow"><span></span> A place can hold a whole story</p>
-          <h1 id="hero-title">The place your story happened, turned into art.</h1>
+        <div class="hero-copy is-revealed">
+          <p class="eyebrow"><span></span> A place is never just a place</p>
+          <h1 id="hero-title"><span>Some places</span><em>become part of us.</em></h1>
           <p class="hero-lede">
-            Make a personal map for where you met, your first home, a wedding city,
-            a favorite journey, or any place worth remembering.
+            Find the street, city, or landmark that changed your story. Turn its coordinates
+            into a personal artwork made to keep, print, or give.
           </p>
           <form class="hero-place-search" id="heroPlaceSearchForm" role="search">
-            <label for="heroPlaceSearch">Start with a city or landmark</label>
+            <label for="heroPlaceSearch">Enter a place that matters</label>
             <div>
               <svg aria-hidden="true" viewBox="0 0 20 20">
                 <circle cx="8.5" cy="8.5" r="4.8"></circle>
@@ -99,7 +104,7 @@
           </div>
         </div>
 
-        <div class="hero-art" aria-label="Example personalized London map poster">
+        <div class="hero-art is-revealed" aria-label="Example personalized London map poster">
           <div class="hero-shadow" aria-hidden="true"></div>
           <article class="sample-poster">
             <div class="sample-map" aria-hidden="true">
@@ -127,7 +132,7 @@
             </div>
             <div class="sample-caption">
               <p>WHERE WE BEGAN</p>
-              <h2>LONDON</h2>
+              <p class="sample-city">LONDON</p>
               <span>UNITED KINGDOM · 14 JUNE 2022</span>
             </div>
             <small>Open map data · Personal memory</small>
@@ -140,17 +145,17 @@
         </div>
       </section>
 
-      <section class="statement-strip" aria-label="Product statement">
-        <p>Not just a map.</p>
+      <section class="statement-strip scroll-manifesto" aria-label="Product statement">
+        <p>WHERE IT</p>
         <span aria-hidden="true"></span>
-        <p>A keepsake made from coordinates.</p>
+        <p>HAPPENED</p>
       </section>
 
-      <section class="examples section-shell" id="examples" aria-labelledby="examples-title">
+      <section class="examples section-shell scroll-archive" id="examples" aria-labelledby="examples-title">
         <div class="section-heading split-heading">
           <div>
             <p class="eyebrow"><span></span> Start with a memory</p>
-            <h2 id="examples-title">Six stories, one simple canvas.</h2>
+            <h2 id="examples-title">An archive of beginnings, homes, promises, and returns.</h2>
           </div>
           <p>
             Choose an idea to load a complete starting design, then make every word,
@@ -198,11 +203,11 @@
         </div>
       </section>
 
-      <section class="shop section-shell" id="shop" aria-labelledby="shop-title">
+      <section class="shop section-shell scroll-editions" id="shop" aria-labelledby="shop-title">
         <div class="section-heading split-heading shop-heading">
           <div>
             <p class="eyebrow"><span></span> Choose the finished product</p>
-            <h2 id="shop-title">Design for free. Keep the version that fits the moment.</h2>
+            <h2 id="shop-title">Choose how the memory should live.</h2>
           </div>
           <p>
             Every purchase stays attached to the exact place, wording, map view, and style you created.
@@ -210,8 +215,16 @@
           </p>
         </div>
 
+        <div class="store-status-banner" id="storeStatusBanner" role="status">
+          <span data-store-status-icon aria-hidden="true">○</span>
+          <div>
+            <strong data-store-status-heading>Public preview storefront</strong>
+            <p data-store-status-detail>Checking checkout status…</p>
+          </div>
+        </div>
+
         <div class="product-grid">
-          <article class="product-card">
+          <article class="product-card" data-edition-number="01">
             <div class="product-card-top">
               <span class="product-badge">Simple favorite</span>
               <div class="product-price"><strong>$7</strong><small>one time</small></div>
@@ -230,7 +243,7 @@
             </button>
           </article>
 
-          <article class="product-card product-card-featured">
+          <article class="product-card product-card-featured" data-edition-number="02">
             <div class="product-card-top">
               <span class="product-badge">Most popular</span>
               <div class="product-price"><strong>$12</strong><small>one time</small></div>
@@ -249,7 +262,7 @@
             </button>
           </article>
 
-          <article class="product-card">
+          <article class="product-card" data-edition-number="03">
             <div class="product-card-top">
               <span class="product-badge">For meaningful gifts</span>
               <div class="product-price"><strong>$18</strong><small>one time</small></div>
@@ -269,6 +282,15 @@
           </article>
         </div>
 
+        <section class="product-comparison" aria-labelledby="product-comparison-title">
+          <div class="product-comparison-heading">
+            <p class="eyebrow"><span></span> Compare the finished files</p>
+            <h3 id="product-comparison-title">Choose by how you plan to keep the memory.</h3>
+            <p>Every product begins with the exact design in your browser. The difference is the file set and level of preparation.</p>
+          </div>
+          <div class="product-comparison-rows" id="productComparisonRows"></div>
+        </section>
+
         <div class="shop-assurance" aria-label="Shopping assurances">
           <span><strong>Private draft</strong> Your design remains in your browser.</span>
           <span><strong>Exact design saved</strong> The cart stores a restorable link.</span>
@@ -276,10 +298,10 @@
         </div>
       </section>
 
-      <section class="how section-shell" id="how-it-works" aria-labelledby="how-title">
+      <section class="how section-shell scroll-process" id="how-it-works" aria-labelledby="how-title">
         <div class="section-heading centered-heading">
           <p class="eyebrow"><span></span> Three quiet steps</p>
-          <h2 id="how-title">From place to keepsake in about a minute.</h2>
+          <h2 id="how-title">From remembered place to finished piece.</h2>
         </div>
         <ol class="steps">
           <li>
@@ -310,11 +332,10 @@
         <div class="creator-heading section-shell">
           <div>
             <p class="eyebrow eyebrow-light"><span></span> Design free · purchase when ready</p>
-            <h2 id="creator-title">Create the exact version you want.</h2>
+            <h2 id="creator-title">Build the piece, one decision at a time.</h2>
           </div>
           <p>
-            Search a city or landmark, personalize every detail, then save the exact version
-            to your cart. No account is required to begin.
+            Seven focused steps keep the studio calm while the complete artwork updates live beside you.
           </p>
         </div>
 
@@ -531,7 +552,7 @@
                 <article class="poster poster-theme-midnight layout-classic" id="poster" aria-label="Personalized map poster">
                   <div class="poster-map-wrap">
                     <div id="map" class="poster-map" aria-label="Interactive map. Drag to pan and scroll or pinch to zoom."></div>
-                    <div class="map-fallback" id="mapFallback" hidden>
+                    <div class="map-fallback" id="mapFallback" role="status" aria-live="polite" hidden>
                       <svg viewBox="0 0 600 800" preserveAspectRatio="none" aria-hidden="true">
                         <path d="M-30 170C130 250 210 132 360 218s165 48 280 108"></path>
                         <path d="M-30 430c130-80 247 57 374-28s204-42 302 20"></path>
@@ -631,9 +652,44 @@
         </div>
       </section>
 
-      <section class="closing section-shell" aria-labelledby="closing-title">
+      <section class="buying-confidence section-shell" id="buyingConfidence" aria-labelledby="buying-confidence-title">
+        <div class="section-heading split-heading">
+          <div>
+            <p class="eyebrow"><span></span> Before you order</p>
+            <h2 id="buying-confidence-title">A clear handoff from your design to the finished files.</h2>
+          </div>
+          <p>The current MVP keeps the creative work in your browser and uses a hosted checkout only after payment links are connected.</p>
+        </div>
+        <div class="confidence-grid">
+          <article><span>01</span><h3>Design preserved</h3><p>The cart stores your exact coordinates, wording, theme, layout, format, and restorable link.</p></article>
+          <article><span>02</span><h3>Hosted payment</h3><p>No card details are entered on this website. Payment will happen with the connected checkout provider.</p></article>
+          <article><span>03</span><h3>Human quality check</h3><p>Personalized paid files are reviewed against the saved design before delivery.</p></article>
+          <article><span>04</span><h3>Digital delivery</h3><p>Products are digital-only in this cycle. The standard target is 2–3 business days.</p></article>
+        </div>
+        <div class="delivery-steps">
+          <p class="eyebrow"><span></span> What happens next</p>
+          <ol>
+            <li><strong>1</strong><div><h3>Create and review</h3><p>Finish the map and check every line of text.</p></div></li>
+            <li><strong>2</strong><div><h3>Add the exact design</h3><p>Choose a product and save that version to the browser cart.</p></div></li>
+            <li><strong>3</strong><div><h3>Pay or save a request</h3><p>Use hosted checkout when connected, or download a complete order request during the preview.</p></div></li>
+            <li><strong>4</strong><div><h3>Receive the files</h3><p>The final watermark-free files are prepared and delivered digitally.</p></div></li>
+          </ol>
+        </div>
+        <div class="store-faq" aria-labelledby="store-faq-title">
+          <div><p class="eyebrow"><span></span> Questions before buying</p><h3 id="store-faq-title">The practical details.</h3></div>
+          <div>
+            <details><summary>Is this a physical poster?</summary><p>No. The current products are digital file packages. Physical printing and shipping are not included yet.</p></details>
+            <details><summary>Can I edit a design after adding it to the cart?</summary><p>Yes. Open the cart, choose “Edit design,” make the changes, and add the updated version again.</p></details>
+            <details><summary>Are the free downloads usable?</summary><p>Yes, for evaluation and sharing. Free PNG and print previews include a visible preview watermark.</p></details>
+            <details><summary>When will paid files arrive?</summary><p>The working delivery target is 2–3 business days after payment and complete design details are received.</p></details>
+            <details><summary>What happens if checkout is not connected?</summary><p>You can still save the cart, copy the complete order brief, or download an order request. No payment is collected in that mode.</p></details>
+          </div>
+        </div>
+      </section>
+
+      <section class="closing section-shell scroll-closing" aria-labelledby="closing-title">
         <p class="eyebrow"><span></span> A small object with a long memory</p>
-        <h2 id="closing-title">Some places are too important to leave as a pin in an app.</h2>
+        <h2 id="closing-title">Leave the pin.</h2>
         <div class="closing-actions">
           <a class="button button-primary" href="#creator">Make yours now</a>
           <button class="button button-outline" id="closingCartButton" type="button">Open cart</button>
@@ -662,6 +718,10 @@
         <a href="https://www.wikipedia.org/" rel="noreferrer">Wikipedia search</a>
         <a href="https://maplibre.org/" rel="noreferrer">MapLibre</a>
         <a href="https://openfreemap.org/" rel="noreferrer">OpenFreeMap</a>
+        <a href="./privacy.html">Privacy</a>
+        <a href="./terms.html">Terms</a>
+        <a href="./refunds.html">Refunds</a>
+        <a href="./delivery.html">Delivery</a>
       </div>
       <p class="footer-attribution">Map data © OpenStreetMap contributors. Map styles served by OpenFreeMap. Global landmark search results are provided by Wikipedia.</p>
     </footer>
@@ -691,6 +751,10 @@
           </div>
           <p>Taxes, if applicable, are calculated by the hosted checkout provider.</p>
           <button class="button button-primary button-full" id="cartCheckoutButton" type="button" disabled>Continue to secure checkout</button>
+          <div class="cart-portability">
+            <button class="button button-outline" id="downloadCartButton" type="button" disabled>Save cart backup</button>
+            <label class="button button-outline" for="restoreCartInput">Restore backup<input id="restoreCartInput" type="file" accept="application/json,.json" hidden /></label>
+          </div>
           <button class="cart-clear-button" id="cartClearButton" type="button" disabled>Clear cart</button>
         </footer>
       </section>
@@ -707,6 +771,19 @@
         </header>
         <div class="checkout-items" id="checkoutItems"></div>
         <div class="checkout-total-row"><span>Total</span><strong id="checkoutTotal">$0</strong></div>
+        <section class="checkout-customer-details" id="checkoutCustomerDetails" aria-labelledby="checkout-details-title">
+          <div>
+            <h3 id="checkout-details-title">Order details</h3>
+            <p>These fields stay in this browser and are included only in the copied order brief.</p>
+          </div>
+          <div class="checkout-fields">
+            <label><span>Name <small>optional</small></span><input id="orderName" autocomplete="name" maxlength="80" placeholder="Your name" /></label>
+            <label><span>Email <small>optional here</small></span><input id="orderEmail" type="email" autocomplete="email" maxlength="120" placeholder="you@example.com" /></label>
+            <label><span>Gift recipient <small>optional</small></span><input id="orderGiftRecipient" maxlength="80" placeholder="Who is this for?" /></label>
+            <label class="checkout-note-field"><span>Notes <small>optional</small></span><textarea id="orderNote" maxlength="500" rows="3" placeholder="Delivery date, caption preference, or anything to review"></textarea></label>
+          </div>
+          <label class="checkout-consent"><input id="orderTerms" type="checkbox" /><span>I have reviewed the design and agree to the <a href="./terms.html" target="_blank" rel="noopener">terms</a>, <a href="./delivery.html" target="_blank" rel="noopener">delivery policy</a>, and <a href="./refunds.html" target="_blank" rel="noopener">refund policy</a>.</span></label>
+        </section>
         <div class="checkout-status is-pending" id="checkoutStatus">
           <strong>Payment connection is being finalized</strong>
           <span>Your design is safely stored in this browser cart.</span>
@@ -717,10 +794,10 @@
       </section>
     </dialog>
 
-    <dialog class="confirm-dialog" id="resetDialog">
+    <dialog class="confirm-dialog" id="resetDialog" aria-labelledby="reset-title">
       <form method="dialog">
         <p class="eyebrow"><span></span> Reset draft</p>
-        <h2>Start again from the original design?</h2>
+        <h2 id="reset-title">Start again from the original design?</h2>
         <p>This clears the saved draft on this device. A shared link will not be changed.</p>
         <div class="dialog-actions">
           <button class="button button-outline" value="cancel">Keep my design</button>
@@ -730,6 +807,16 @@
     </dialog>
 
     <noscript>
+      <style>
+        .atelier-motion .hero-copy,
+        .atelier-motion .hero-art,
+        .atelier-motion .section-heading,
+        .atelier-motion .example-card,
+        .atelier-motion .product-card,
+        .atelier-motion .steps li,
+        .atelier-motion .creator-heading,
+        .atelier-motion .closing > * { opacity: 1 !important; transform: none !important; }
+      </style>
       <div class="noscript-message">This map creator needs JavaScript to edit and export your poster.</div>
     </noscript>
   </body>

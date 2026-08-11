@@ -3,14 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#f3efe6" />
-    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#071722" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="description" content="Review the order details saved in this browser after returning from hosted checkout." />
     <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css" />
-    <title>Thank you — Where It Happened</title>
+    <link rel="stylesheet" href="./site.css" />
+    <title>Checkout return — Where It Happened</title>
     <script type="module" src="./thank-you.js"></script>
   </head>
-  <body class="thank-you-page">
+  <body class="atelier-theme thank-you-page">
     <a class="skip-link" href="#confirmation">Skip to order confirmation</a>
     <div class="page-grain" aria-hidden="true"></div>
 
@@ -34,10 +35,10 @@
     <main class="thank-you-main" id="confirmation">
       <section class="thank-you-card" aria-labelledby="thank-you-title">
         <div class="thank-you-seal" aria-hidden="true">✓</div>
-        <p class="eyebrow"><span></span> Checkout complete</p>
-        <h1 id="thank-you-title">Thank you. Your place is now part of the order.</h1>
+        <p class="eyebrow" id="thankYouStatusLabel"><span aria-hidden="true"></span> Checkout return</p>
+        <h1 id="thank-you-title">Reviewing the order saved in this browser.</h1>
         <p class="thank-you-lede">
-          Check your email for the payment receipt and any delivery updates. Custom finished files are sent separately from the checkout receipt.
+          The payment-provider receipt is the source of truth for a completed purchase. This page only restores the local design reference when it is available.
         </p>
 
         <div class="thank-you-order" id="thankYouOrder" hidden>
