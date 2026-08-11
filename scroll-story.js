@@ -1,5 +1,6 @@
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-const compactViewport = window.matchMedia("(max-width: 760px), (pointer: coarse)").matches;
+const compactQuery = window.matchMedia("(max-width: 760px), (pointer: coarse)");
+const isCompactViewport = () => compactQuery.matches;
 const body = document.body;
 
 body.classList.add("scroll-story-theme");
@@ -79,7 +80,7 @@ let lastActiveArchive = -1;
 let lastActiveStep = -1;
 
 function updateArchive(progress) {
-  if (!examples || !exampleGrid || compactViewport || reducedMotion) return;
+  if (!examples || !exampleGrid || isCompactViewport() || reducedMotion) return;
 
   const sideInset = Math.max(36, window.innerWidth * 0.065);
   const maxShift = Math.max(0, exampleGrid.scrollWidth - window.innerWidth + sideInset * 2);
@@ -105,7 +106,7 @@ function updateProcess(progress) {
 }
 
 function updateProductStack() {
-  if (!shop || compactViewport || reducedMotion) return;
+  if (!shop || isCompactViewport() || reducedMotion) return;
   productCards.forEach((card) => {
     const rect = card.getBoundingClientRect();
     const start = window.innerHeight * 0.82;
@@ -148,6 +149,7 @@ function scheduleUpdate() {
 
 window.addEventListener("scroll", scheduleUpdate, { passive: true });
 window.addEventListener("resize", scheduleUpdate, { passive: true });
+compactQuery.addEventListener?.("change", scheduleUpdate);
 window.addEventListener("load", scheduleUpdate, { once: true });
 document.fonts?.ready?.then(scheduleUpdate).catch(() => {});
 

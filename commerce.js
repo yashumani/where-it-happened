@@ -187,11 +187,12 @@ export function initCommerce({
     elements.selectedDelivery.textContent = `${product.delivery} · ${product.turnaround}`;
 
     $$('[data-select-product]').forEach((button) => {
-      const selected = button.dataset.selectProduct === product.id;
+      const buttonProduct = getProduct(button.dataset.selectProduct) || product;
+      const selected = buttonProduct.id === product.id;
       button.classList.toggle("is-selected", selected);
       button.setAttribute("aria-pressed", String(selected));
-      if (selected) button.textContent = `${product.shortName} selected`;
-      else button.textContent = `Choose ${product.shortName}`;
+      if (selected) button.textContent = `${buttonProduct.shortName} selected`;
+      else button.textContent = `Choose ${buttonProduct.shortName}`;
     });
 
     if (scroll) scrollToCreator();
