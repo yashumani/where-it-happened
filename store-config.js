@@ -1,3 +1,5 @@
+import "./atelier.js";
+
 /**
  * Public storefront configuration.
  *
