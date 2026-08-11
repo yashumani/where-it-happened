@@ -56,3 +56,5 @@ jobs:
           fi
           git commit -m "Complete design and performance review"
           git push origin HEAD:agent/final-reviewed-deployment
+
+# Re-run after all verified archive chunks were staged.
