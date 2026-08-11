@@ -64,9 +64,9 @@ function initGuidedCreator() {
   const creatorTitle = $("#creator-title");
   const creatorLead = $(".creator-heading > p");
   const editorLabel = $(".control-panel-header strong");
-  if (creatorTitle) creatorTitle.textContent = "Build the piece, one decision at a time.";
+  if (creatorTitle) creatorTitle.textContent = "Build it like a studio, not a long form.";
   if (creatorLead) creatorLead.textContent = "Seven focused steps keep the studio calm while the complete artwork updates live beside you.";
-  if (editorLabel) editorLabel.textContent = "Guided studio";
+  if (editorLabel) editorLabel.textContent = "Map object studio";
   controlPanel.classList.add("is-guided");
   workspace.classList.add("wizard-enabled");
 

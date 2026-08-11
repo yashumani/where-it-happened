@@ -3,30 +3,30 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#071722" />
+    <meta name="theme-color" content="#f2efe7" />
     <meta
       name="description"
-      content="Turn a meaningful city, street, or landmark into an editorial memory-map artwork made to keep, print, or give."
+      content="Turn any meaningful place into a personal map object made to keep, print, or give."
     />
-    <meta property="og:title" content="Where It Happened — Cartographic Memory Atelier" />
+    <meta property="og:title" content="Where It Happened — Personal Map Objects" />
     <meta
       property="og:description"
-      content="Find the place that changed your story and compose its coordinates as a personal map artwork."
+      content="Search a meaningful place and compose its coordinates as a personal map object."
     />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
     <link rel="manifest" href="./site.webmanifest" />
-    <link rel="stylesheet" href="./site.css" />
+    <link rel="stylesheet" href="./site.css?v=atlas-v3" />
     <link rel="modulepreload" href="./atelier.js" />
     <link rel="modulepreload" href="./cities.js" />
     <link rel="modulepreload" href="./commerce.js" />
     <link rel="modulepreload" href="./store-config.js" />
-    <title>Where It Happened — Cartographic Memory Atelier</title>
+    <title>Where It Happened — Personal Map Objects</title>
     <script type="module" src="./app.js"></script>
   </head>
 
-  <body class="atelier-theme scroll-story-theme wizard-loading atelier-motion">
+  <body class="atelier-theme scroll-story-theme wizard-loading atelier-motion atlas-v3">
     <a class="skip-link" href="#creator">Skip to the map creator</a>
     <div class="page-grain" aria-hidden="true"></div>
 
@@ -41,14 +41,14 @@
         </span>
         <span>
           <strong>Where It Happened</strong>
-          <small>Memory Map Studio</small>
+          <small>Personal Map Objects</small>
         </span>
       </a>
 
       <nav class="header-nav" aria-label="Main navigation">
-        <a href="#examples">Ideas</a>
-        <a href="#shop">Shop</a>
-        <a href="#how-it-works">How it works</a>
+        <a href="#examples">Archive</a>
+        <a href="#shop">Editions</a>
+        <a href="#how-it-works">Process</a>
         <button class="header-cart-button" id="cartOpenButton" type="button" aria-label="Open empty cart">
           <svg aria-hidden="true" viewBox="0 0 20 20">
             <path d="M5.5 7.5h9l-.7 9h-7.6z"></path>
@@ -70,37 +70,37 @@
     <main>
       <section class="hero section-shell" aria-labelledby="hero-title">
         <div class="hero-copy is-revealed">
-          <p class="eyebrow"><span></span> A place is never just a place</p>
-          <h1 id="hero-title"><span>Some places</span><em>become part of us.</em></h1>
+          <p class="eyebrow"><span></span> A personal atlas for one meaningful place</p>
+          <h1 id="hero-title"><span>Keep the place</span><em>that changed everything.</em></h1>
           <p class="hero-lede">
-            Find the street, city, or landmark that changed your story. Turn its coordinates
-            into a personal artwork made to keep, print, or give.
+            Search any city, street, or landmark. Shape the map, words, color, and format,
+            then keep the exact version as a digital artwork or print-ready file.
           </p>
           <form class="hero-place-search" id="heroPlaceSearchForm" role="search">
-            <label for="heroPlaceSearch">Enter a place that matters</label>
+            <label for="heroPlaceSearch">Search a city, street, or landmark</label>
             <div>
               <svg aria-hidden="true" viewBox="0 0 20 20">
                 <circle cx="8.5" cy="8.5" r="4.8"></circle>
                 <path d="m12 12 4 4"></path>
               </svg>
-              <input id="heroPlaceSearch" type="search" autocomplete="off" placeholder="Try Paris, Central Park, Kyoto…" />
-              <button type="submit">Find this place</button>
+              <input id="heroPlaceSearch" type="search" autocomplete="off" placeholder="Paris, Central Park, Kyoto…" />
+              <button type="submit">Start with this place</button>
             </div>
-            <p>Searches the built-in city list first, then notable places worldwide.</p>
+            <p>Instant city matches first, followed by notable places worldwide.</p>
           </form>
           <div class="hero-actions">
             <a class="button button-primary" href="#creator">
-              Create your map
+              Open the studio
               <svg aria-hidden="true" viewBox="0 0 20 20">
                 <path d="M4 10h11M11 6l4 4-4 4"></path>
               </svg>
             </a>
-            <a class="text-link" href="#examples">See six ideas</a>
+            <a class="text-link" href="#examples">Explore the archive</a>
           </div>
           <div class="hero-notes" aria-label="Product details">
-            <span>Free to design</span>
-            <span>Buy only when ready</span>
-            <span>Saved in your browser</span>
+            <span>Live map editor</span>
+            <span>No account required</span>
+            <span>Free preview export</span>
           </div>
         </div>
 
@@ -146,20 +146,20 @@
       </section>
 
       <section class="statement-strip scroll-manifesto" aria-label="Product statement">
-        <p>WHERE IT</p>
+        <p>FIND IT</p>
         <span aria-hidden="true"></span>
-        <p>HAPPENED</p>
+        <p>KEEP IT</p>
       </section>
 
       <section class="examples section-shell scroll-archive" id="examples" aria-labelledby="examples-title">
         <div class="section-heading split-heading">
           <div>
-            <p class="eyebrow"><span></span> Start with a memory</p>
-            <h2 id="examples-title">An archive of beginnings, homes, promises, and returns.</h2>
+            <p class="eyebrow"><span></span> Six ways to remember</p>
+            <h2 id="examples-title">A gallery of places that became personal.</h2>
           </div>
           <p>
-            Choose an idea to load a complete starting design, then make every word,
-            color, and coordinate your own.
+            Choose a starting point, then reshape every word, color, coordinate,
+            crop, and format in the guided studio.
           </p>
         </div>
 
@@ -206,8 +206,8 @@
       <section class="shop section-shell scroll-editions" id="shop" aria-labelledby="shop-title">
         <div class="section-heading split-heading shop-heading">
           <div>
-            <p class="eyebrow"><span></span> Choose the finished product</p>
-            <h2 id="shop-title">Choose how the memory should live.</h2>
+            <p class="eyebrow"><span></span> Three finished editions</p>
+            <h2 id="shop-title">Pick the file set, not a subscription.</h2>
           </div>
           <p>
             Every purchase stays attached to the exact place, wording, map view, and style you created.
@@ -300,8 +300,8 @@
 
       <section class="how section-shell scroll-process" id="how-it-works" aria-labelledby="how-title">
         <div class="section-heading centered-heading">
-          <p class="eyebrow"><span></span> Three quiet steps</p>
-          <h2 id="how-title">From remembered place to finished piece.</h2>
+          <p class="eyebrow"><span></span> From search to finished piece</p>
+          <h2 id="how-title">A meaningful map, made in a few calm decisions.</h2>
         </div>
         <ol class="steps">
           <li>
@@ -332,7 +332,7 @@
         <div class="creator-heading section-shell">
           <div>
             <p class="eyebrow eyebrow-light"><span></span> Design free · purchase when ready</p>
-            <h2 id="creator-title">Build the piece, one decision at a time.</h2>
+            <h2 id="creator-title">Build it like a studio, not a long form.</h2>
           </div>
           <p>
             Seven focused steps keep the studio calm while the complete artwork updates live beside you.
@@ -688,8 +688,8 @@
       </section>
 
       <section class="closing section-shell scroll-closing" aria-labelledby="closing-title">
-        <p class="eyebrow"><span></span> A small object with a long memory</p>
-        <h2 id="closing-title">Leave the pin.</h2>
+        <p class="eyebrow"><span></span> Coordinates become a keepsake</p>
+        <h2 id="closing-title">The place stays.</h2>
         <div class="closing-actions">
           <a class="button button-primary" href="#creator">Make yours now</a>
           <button class="button button-outline" id="closingCartButton" type="button">Open cart</button>
@@ -708,13 +708,13 @@
         </span>
         <div>
           <strong>Where It Happened</strong>
-          <p>A personal memory-map studio with a browser-based cart.</p>
+          <p>Personal map objects, composed in your browser.</p>
         </div>
       </div>
       <div class="footer-links">
         <a href="#top">Top</a>
         <a href="#creator">Creator</a>
-        <a href="#shop">Shop</a>
+        <a href="#shop">Editions</a>
         <a href="https://www.wikipedia.org/" rel="noreferrer">Wikipedia search</a>
         <a href="https://maplibre.org/" rel="noreferrer">MapLibre</a>
         <a href="https://openfreemap.org/" rel="noreferrer">OpenFreeMap</a>

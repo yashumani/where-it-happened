@@ -75,7 +75,7 @@ function createHeroCue() {
   const cue = document.createElement("div");
   cue.className = "scroll-story-cue";
   cue.setAttribute("aria-hidden", "true");
-  cue.innerHTML = "<span></span><small>Scroll through the archive</small>";
+  cue.innerHTML = "<span></span><small>Scroll the object archive</small>";
   hero.append(cue);
 }
 
