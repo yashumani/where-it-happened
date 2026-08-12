@@ -16,6 +16,7 @@ const javascriptFiles = [
   "atelier.js",
   "cities.js",
   "commerce.js",
+  "mobile-studio.js",
   "scroll-story.js",
   "store-config.js",
   "studio-wizard.js",
@@ -62,8 +63,13 @@ const initialJavascriptGzip = (
   await Promise.all(initialJavascriptFiles.map(async (file) => gzipSync(await readFile(file)).length))
 ).reduce((sum, size) => sum + size, 0);
 const cssGzip = gzipSync(productionCss).length;
+const mobileCss = await readFile("mobile-app.css", "utf8").catch(() => "");
+const mobileCssGzip = gzipSync(mobileCss).length;
+const mobileStudioGzip = gzipSync(await readFile("mobile-studio.js")).length;
 report(initialJavascriptGzip <= 55 * 1024, `Initial JavaScript exceeds the 55 KiB gzip budget: ${initialJavascriptGzip} bytes`);
 report(cssGzip <= 40 * 1024, `Production CSS exceeds the 40 KiB gzip budget: ${cssGzip} bytes`);
+report(mobileCssGzip <= 10 * 1024, `Mobile application CSS exceeds the 10 KiB gzip budget: ${mobileCssGzip} bytes`);
+report(mobileStudioGzip <= 10 * 1024, `Mobile studio exceeds the 10 KiB gzip budget: ${mobileStudioGzip} bytes`);
 
 for (const file of htmlFiles) {
   const html = await readFile(file, "utf8").catch(() => "");
@@ -95,6 +101,8 @@ const atelierSource = await readFile("atelier.js", "utf8");
 report(atelierSource.includes('import("./studio-wizard.js")'), "The guided studio is no longer deferred");
 report(atelierSource.includes('import("./scroll-story.js")'), "Scroll storytelling is no longer deferred");
 report(index.includes('<link rel="stylesheet" href="./site.css'), "index.html does not use the CSS bundle");
+report(index.includes('href="./mobile-app.css?v=mobile-app-v1"'), "index.html does not load the mobile application layout");
+report(index.includes('src="./mobile-studio.js?v=mobile-app-v1"'), "index.html does not load the mobile studio controller");
 report(index.includes('<h1 id="hero-title"><span>Keep the place</span><em>that changed everything.</em></h1>'), "The semantic hero headline is missing");
 for (const id of requiredIndexIds) {
   report(new RegExp(`\\bid=["']${id}["']`).test(index), `index.html is missing required interface ID: ${id}`);
